@@ -1,0 +1,302 @@
+---
+title: "dada2_workflow_its"
+out1put: html_document
+date: "2024-06-18"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "~/demulticoder_benchmarking_2/rhode_DADA2_workflow")
+
+library(phyloseq); packageVersion("phyloseq")
+library(ggplot2); packageVersion("ggplot2")
+library(dada2); packageVersion("dada2")
+library(dada2); packageVersion("Biostrings")
+library(ShortRead); packageVersion("ShortRead")
+library(parallel); packageVersion("parallel")
+```
+
+### Demultiplex ITS reads
+```{r demultiplex its reads}
+FWD <- "CTTGGTCATTTAGAGGAAGTAA"  
+REV <- "GCTGCGTTCTTCATCGATGC"
+
+allOrients <- function(primer) {
+    # Create all orientations of the input sequence
+    require(Biostrings)
+    dna <- DNAString(primer)  # The Biostrings works w/ DNAString objects rather than character vectors
+    orients <- c(Forward = dna, Complement = Biostrings::complement(dna), Reverse = Biostrings::reverse(dna),
+        RevComp = Biostrings::reverseComplement(dna))
+    return(sapply(orients, toString))  # Convert back to character vector
+}
+FWD.orients <- allOrients(FWD)
+REV.orients <- allOrients(REV)
+FWD.orients
+
+containsPrimer <- function(primer, read) {
+  read <- DNAString(as.character(read))
+  any(sapply(primer, function(p) {
+    p <- DNAString(as.character(p))
+    pattern <- as.character(p)
+    # Replace ambiguity codes with appropriate regex patterns
+    pattern <- gsub("R", "[AG]", pattern)
+    pattern <- gsub("Y", "[CT]", pattern)
+    pattern <- gsub("S", "[GC]", pattern)
+    pattern <- gsub("W", "[AT]", pattern)
+    pattern <- gsub("K", "[GT]", pattern)
+    pattern <- gsub("M", "[AC]", pattern)
+    pattern <- gsub("B", "[CGT]", pattern)
+    pattern <- gsub("D", "[AGT]", pattern)
+    pattern <- gsub("H", "[ACT]", pattern)
+    pattern <- gsub("V", "[ACG]", pattern)
+    pattern <- gsub("N", "[ACGT]", pattern)
+    # Allow for up to 2 mismatches
+    grepl(pattern, as.character(read), ignore.case = TRUE)
+  }))
+}
+# Ensure output directories exist
+path <- "data/reads"
+dir.create(file.path(path, "its/demultiplexed"), recursive = TRUE, showWarnings = FALSE)
+
+
+fnFs <- sort(list.files(path, pattern="_R1.fastq.gz", full.names = TRUE))
+fnRs <- sort(list.files(path, pattern="_R2.fastq.gz", full.names = TRUE))
+
+fnFs.demultiplex <- file.path(path, "its/demultiplexed", basename(fnFs))
+fnRs.demultiplex <- file.path(path, "its/demultiplexed", basename(fnRs))
+
+# Set the number of cores to use (adjust as needed)
+num_cores <- parallel::detectCores() - 1  # Use all but one core
+
+# Function to process a single file pair
+process_file_pair <- function(i) {
+  cat("Processing file:", basename(fnFs[i]), "\n")
+  
+  # Read in the FastQ files
+  readsF <- readFastq(fnFs[i])
+  readsR <- readFastq(fnRs[i])
+  
+  cat("Number of reads in forward file:", length(readsF), "\n")
+  cat("Number of reads in reverse file:", length(readsR), "\n")
+  
+  # Check for primer presence
+  hasitsF <- parallel::mclapply(sread(readsF), containsPrimer, primer = FWD.orients, mc.cores = 1)
+  hasitsR <- parallel::mclapply(sread(readsR), containsPrimer, primer = REV.orients, mc.cores = 1)
+  
+  hasitsF <- unlist(hasitsF)
+  hasitsR <- unlist(hasitsR)
+  
+  cat("Reads with forward primer:", sum(hasitsF), "\n")
+  cat("Reads with reverse primer:", sum(hasitsR), "\n")
+  
+  # Keep reads where either forward or reverse read contains an its primer
+  keepReads <- hasitsF | hasitsR
+  
+  cat("Total reads with its primers:", sum(keepReads), "\n")
+  
+  if (sum(keepReads) == 0) {
+    cat("WARNING: No reads with its primers found in this file pair.\n")
+    # Print a few reads to check
+    cat("Sample of first 5 forward reads:\n")
+    for (j in 1:5) {
+      cat("Read", j, ":\n")
+      cat(as.character(sread(readsF)[j]), "\n")
+      cat("Quality scores:\n")
+      cat(as.character(quality(quality(readsF)[j])), "\n\n")
+    }
+    cat("Sample of first 5 reverse reads:\n")
+    for (j in 1:5) {
+      cat("Read", j, ":\n")
+      cat(as.character(sread(readsR)[j]), "\n")
+      cat("Quality scores:\n")
+      cat(as.character(quality(quality(readsR)[j])), "\n\n")
+    }
+  } else {
+    # Subset the reads
+    itsReadsF <- readsF[keepReads]
+    itsReadsR <- readsR[keepReads]
+    
+    # Write out the filtered reads
+    writeFastq(itsReadsF, fnFs.demultiplex[i], compress = TRUE)
+    writeFastq(itsReadsR, fnRs.demultiplex[i], compress = TRUE)
+    
+    cat("Written to:", fnFs.demultiplex[i], "\n")
+    cat("Written to:", fnRs.demultiplex[i], "\n")
+  }
+  
+  cat("\n")
+}
+
+# Run the processing in parallel
+mclapply(seq_along(fnFs), process_file_pair, mc.cores = num_cores)
+```
+
+### Remove Ns from any reads before beginning DADA2 workflow
+```{r remove Ns}
+#Set up directory structure of output files
+fnFs.prefilt <- file.path(path, "its/prefiltered", basename(fnFs))
+fnRs.prefilt <- file.path(path, "its/prefiltered", basename(fnRs))
+
+out <- filterAndTrim(fnFs.demultiplex, fnFs.prefilt, fnRs.demultiplex, fnRs.prefilt, maxN=0, compress=TRUE, multithread=TRUE)
+```
+
+### Get stats on primer counts before running Cutadapt 
+```{r get primer counts}
+FWD <- "CTTGGTCATTTAGAGGAAGTAA"  
+REV <- "GCTGCGTTCTTCATCGATGC"
+
+allOrients <- function(primer) {
+    # Create all orientations of the input sequence
+    require(Biostrings)
+    dna <- DNAString(primer)  # The Biostrings works w/ DNAString objects rather than character vectors
+    orients <- c(Forward = dna, Complement = Biostrings::complement(dna), Reverse = Biostrings::reverse(dna),
+        RevComp = Biostrings::reverseComplement(dna))
+    return(sapply(orients, toString))  # Convert back to character vector
+}
+FWD.orients <- allOrients(FWD)
+REV.orients <- allOrients(REV)
+FWD.orients
+
+primerHits <- function(primer, fn) {
+    # Counts number of reads in which the primer is found
+    nhits <- vcountPattern(primer, sread(readFastq(fn)), fixed = FALSE)
+    return(sum(nhits > 0))
+}
+
+rbind(FWD.ForwardReads = sapply(FWD.orients, primerHits, fn = fnFs.prefilt[[1]]), FWD.ReverseReads = sapply(FWD.orients,
+    primerHits, fn = fnRs.prefilt[[1]]), REV.ForwardReads = sapply(REV.orients, primerHits,
+    fn = fnFs.prefilt[[1]]), REV.ReverseReads = sapply(REV.orients, primerHits, fn = fnRs.prefilt[[1]]))
+```
+
+### Run Cutadapt to remove primers
+```{r run cutadapt}
+cutadapt <- "/usr/bin/cutadapt"
+system2(cutadapt, args = "--version") # Run shell commands from R
+
+path.cut <- file.path(path, "its/cutadapt")
+if(!dir.exists(path.cut)) dir.create(path.cut)
+fnFs.cut <- file.path(path.cut, basename(fnFs))
+fnRs.cut <- file.path(path.cut, basename(fnRs))
+
+FWD.RC <- dada2:::rc(FWD)
+REV.RC <- dada2:::rc(REV)
+# Trim FWD and the reverse-complement of REV off of R1 (forward reads)
+R1.flags <- paste("-g", FWD, "-a", REV.RC) 
+# Trim REV and the reverse-complement of FWD off of R2 (reverse reads)
+R2.flags <- paste("-G", REV, "-A", FWD.RC) 
+# Run Cutadapt
+for(i in seq_along(fnFs)) {
+  system2(cutadapt, args = c(R1.flags, R2.flags, "-n", 2, # -n 2 required to remove FWD and REV from reads
+                             "-o", fnFs.cut[i], "-p", fnRs.cut[i], 
+                             "--minimum-length", 50,
+                             # out1put files
+                             fnFs.prefilt[i], fnRs.prefilt[i]))}
+```
+
+### Get stats on primer counts after running cutadapt 
+```{r get post-trim primer counts}
+rbind(FWD.ForwardReads = sapply(FWD.orients, primerHits, fn = fnFs.cut[[1]]), FWD.ReverseReads = sapply(FWD.orients,
+    primerHits, fn = fnRs.cut[[1]]), REV.ForwardReads = sapply(REV.orients, primerHits,
+    fn = fnFs.cut[[1]]), REV.ReverseReads = sapply(REV.orients, primerHits, fn = fnRs.cut[[1]]))
+```
+
+### Now we will inspect read quality profiles
+``` {r plot qualityp rofiles}
+# Forward and reverse fastq filenames have the format:
+cutFs <- sort(list.files(path.cut, pattern = "_R1.fastq.gz", full.names = TRUE))
+cutRs <- sort(list.files(path.cut, pattern = "_R2.fastq.gz", full.names = TRUE))
+
+# Extract sample names, assuming filenames have format:
+get.sample.name <- function(fname) strsplit(basename(fname), "_")[[1]][1]
+sample.names <- unname(sapply(cutFs, get.sample.name))
+head(sample.names)
+
+plotQualityProfile(cutFs[1:5])
+plotQualityProfile(cutRs[1:5])
+```
+
+### Run core filterAndTrim command from DADA2 to remove any poor quality reads
+```{r filter and trim reads}
+filtFs <- file.path(path.cut, "filtered", basename(cutFs))
+filtRs <- file.path(path.cut, "filtered", basename(cutRs))
+
+out <- filterAndTrim(cutFs, filtFs, cutRs, filtRs, maxN = 0, maxEE = c(5, 5), truncQ = 5,
+    minLen = 50, maxLen = Inf, rm.phix = TRUE, compress = TRUE, multithread = TRUE) 
+head(out)
+
+out
+```
+
+### Now we will learn error rates
+``` {r learn error rates}
+get.sample.name <- function(fname) strsplit(basename(fname), "_")[[1]][1]
+sample.names <- unname(sapply(cutFs, get.sample.name))
+head(sample.names)
+
+errF <- learnErrors(filtFs, multithread = TRUE)
+errR <- learnErrors(filtRs, multithread = TRUE)
+
+plotErrors(errF, nominalQ = TRUE)
+plotErrors(errR, nominalQ = TRUE)
+```
+
+### Next is the key sample inference step
+``` {r sample inference}
+dadaFs <- dada(filtFs, err = errF, multithread = TRUE)
+dadaRs <- dada(filtRs, err = errR, multithread = TRUE)
+```
+
+### We will merge paired reads
+``` {r merged paired}
+get.sample.name <- function(fname) strsplit(basename(fname), "_")[[1]][1]
+sample.names <- unname(sapply(filtRs, get.sample.name))
+head(sample.names)
+
+mergers <- mergePairs(dadaFs, filtFs, dadaRs, filtRs,  minOverlap = 15, maxMismatch = 2, verbose=TRUE)
+```
+
+### We will then construct a sequence table
+``` {r construct sequence table}
+seqtab <- makeSequenceTable(mergers)
+dim(seqtab)
+```
+
+### Finally, we will remove chimeric sequences
+``` {r remove chimeras}
+seqtab.nochim <- removeBimeraDenovo(seqtab, method="consensus", multithread=TRUE, verbose=TRUE)
+table(nchar(getSequences(seqtab.nochim)))
+sample_prefixes <- stringr::str_extract(rownames(seqtab.nochim), "^[^_]+")
+rownames(seqtab.nochim) <- sample_prefixes
+write.table(seqtab.nochim, file="outputs/its/its_seqtab_nochim.out",sep="\t",quote=F)
+```
+
+### At the end, we will track reads through the full DADA2 pipeline
+``` {r plotqualityprofiles}
+getN <- function(x) sum(getUniques(x))
+track <- cbind(out, sapply(dadaFs, getN), sapply(dadaRs, getN), sapply(mergers, getN),
+    rowSums(seqtab.nochim))
+# If processing a single sample, remove the sapply calls: e.g. replace
+# sapply(dadaFs, getN) with getN(dadaFs)
+
+rownames(track) <- sample.names
+colnames(track) <- c("input", "filtered", "denoisedF", "denoisedR", "merged", "nonchim")
+head(track)
+
+write.table(track, file="outputs/its/its_trackreads.out",sep="\t",quote=F)
+```
+
+### If everything look good, let's assign taxonomy
+``` {r assignTaxonomy}
+itsdb.ref <- "db/sh_general_release_dynamic_18.07.2023.fasta"  # CHANGE ME to location on your machine
+taxa <- assignTaxonomy(seqtab.nochim, itsdb.ref, multithread = TRUE, minBoot = 0, outputBootstraps = TRUE, verbose=TRUE, tryRC = FALSE)
+
+taxa.print <- taxa  # Removing sequence rownames for display only
+rownames(taxa.print) <- NULL
+
+write.table(taxa, file="outputs/its/its_taxa.out",sep="\t",quote=F)
+```
+
+### Let's collect info on R configuration and associated package versions that are downloaded
+```{r}
+sessioninfo::session_info()
+```

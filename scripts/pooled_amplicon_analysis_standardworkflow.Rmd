@@ -1,0 +1,266 @@
+---
+title: "Pooled amplicon example"
+output: 
+  rmarkdown::html_vignette:
+    fig_path: "man/figures"
+vignette: >
+  %\VignetteIndexEntry{Pooled amplicon example}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>", 
+  fig.path = "./"
+)
+```
+
+```{r setup}
+library(phyloseq); packageVersion("phyloseq")
+library(ggplot2); packageVersion("ggplot2")
+library(readr); packageVersion("readr")
+library(purrr); packageVersion("purrr")
+library(furrr); packageVersion("furrr")
+library(dplyr); packageVersion("dplyr")
+library(stringr); packageVersion("stringr")
+library(metacoder); packageVersion("metacoder")
+library(data.table); packageVersion("data.table")
+library(decontam); packageVersion("decontam")
+library(tidyr); packageVersion("tidyr")
+library(purrr); packageVersion("purrr")
+library(forcats); packageVersion("forcats")
+library(Biostrings); packageVersion("Biostrings")
+library(magick); packageVersion("magick")
+library(pdftools);packageVersion("pdftools")
+knitr::opts_knit$set(root.dir = "~/benchmark_demulticoder")
+```
+
+### Demonstration of how to use demulticoder on a dataset that has pooled amplicons (RPS10 and ITS), and how generalized analysis would be done if you didn't use demulticoder. A more nuanced analysis is shown in 'pooled_amplicoin_analysis_demulticoder.Rmd'
+
+### Let's also load files from the standard worfklows for its and dataset rps10 datasets, and combine. We'll then make phyloeq and taxmap objects to do analogous analyses to what we did with demulticoder outputs
+```{r load files standard workflow}
+#Load DADA2 files
+seqtab_nochim_its <- read.table("standard_workflow/its/its_seqtab_nochim.out")
+
+rownames(seqtab_nochim_its) <- gsub("__", "_", rownames(seqtab_nochim_its))
+
+taxa_its<- read.table("standard_workflow/its/its_taxa.out", sep="\t", stringsAsFactors=F,header=T)
+
+taxa_filt_its <- taxa_its %>%
+  mutate(across(starts_with("tax."), ~ ifelse(get(str_replace(cur_column(), "tax.", "boot.")) < 0, NA, .))) %>%
+  set_names(str_replace(names(.), "tax.", ""))
+
+#I want to rename tax input so more in line with other two datasets for final figures
+remove_prefix_its <- function(data) {
+  data <- gsub("[a-z]__", "", data)  
+  return(data)
+}
+
+# Apply the function to each column in the table
+taxa_filt_its[] <- lapply(taxa_filt_its, remove_prefix_its)
+
+revise_species_its <- function(genus, species) {
+  # Combine genus and species with an underscore if species is not NA
+  revise_species_its <- ifelse(is.na(species), NA, paste(genus, species, sep = "_"))
+  return(revise_species_its)
+}
+
+# Apply the function to revise Species column
+taxa_filt_its$Species <- revise_species_its(taxa_filt_its$Genus, taxa_filt_its$Species)
+
+samdf_its<- read.csv("standard_workflow/metadata_its.csv")
+```
+
+### Track number of reads throughout the pipeline
+```{r track reads through DADA2 analysis, include=TRUE}
+track_reads_standard_wf_its <- read.table("standard_workflow/its/its_trackreads.out", sep="\t", stringsAsFactors = F, header=T)
+```
+
+### Format dataframes to create phyloseq object
+```{r format dataframes, include=TRUE}
+# # For ease of analysis, convert the DADA2 outputs into a Phyloseq object, and filter out any necessary samples
+all(rownames(seqtab_nochim_its) %in% samdf_its) 
+rownames(samdf_its) <- samdf_its$sample_name
+
+samdata_its.ps <- sample_data(samdf_its)
+taxa_its.ps <- tax_table(as.matrix(taxa_its))
+
+seqtab.nochim_its.ps <- otu_table(seqtab_nochim_its, taxa_are_rows=FALSE)
+seqtab.nochim_its.ps@taxa_are_rows
+ps_its <- phyloseq(seqtab.nochim_its.ps, samdata_its.ps, taxa_its.ps)
+
+#Add refseq slot
+dna <- Biostrings::DNAStringSet(taxa_names(ps_its))
+names(dna) <- taxa_names(ps_its)
+ps_its <- merge_phyloseq(ps_its, dna)
+taxa_names(ps_its) <- paste0("ASV", seq(ntaxa(ps_its)))
+```
+
+### Let's also do the same for the rps10 dataset
+```{r load files standard workflow}
+#Load DADA2 files
+seqtab_nochim_rps10 <- read.table("standard_workflow/rps10/rps10_seqtab_nochim.out")
+
+rownames(seqtab_nochim_rps10) <- gsub("__", "_", rownames(seqtab_nochim_rps10))
+
+taxa_rps10<- read.table("standard_workflow/rps10/rps10_taxa.out", sep="\t", stringsAsFactors=F,header=T)
+
+taxa_filt_rps10 <- taxa_rps10 %>%
+  mutate(across(starts_with("tax."), ~ ifelse(get(str_replace(cur_column(), "tax.", "boot.")) < 0, NA, .))) %>%
+  set_names(str_replace(names(.), "tax.", ""))
+
+#I want to rename tax input so more in line with other two datasets for final figures
+remove_prefix_rps10 <- function(data) {
+  data <- gsub("[a-z]__", "", data)  
+  return(data)
+}
+
+# Apply the function to each column in the table
+taxa_filt_rps10[] <- lapply(taxa_filt_rps10, remove_prefix_rps10)
+
+revise_species_rps10 <- function(genus, species) {
+  # Combine genus and species with an underscore if species is not NA
+  revise_species_rps10 <- ifelse(is.na(species), NA, paste(genus, species, sep = "_"))
+  return(revise_species_rps10)
+}
+
+# Apply the function to revise Species column
+taxa_filt_rps10$Species <- revise_species_rps10(taxa_filt_rps10$Genus, taxa_filt_rps10$Species)
+
+samdf_rps10<- read.csv("standard_workflow/metadata_rps10.csv")
+```
+
+### Track number of reads throughout the pipeline
+```{r track reads through DADA2 analysis, include=TRUE}
+track_reads_standard_wf_rps10 <- read.table("standard_workflow/rps10/rps10_trackreads.out", sep="\t", stringsAsFactors = F, header=T)
+```
+
+### Format dataframes to create phyloseq object
+```{r format dataframes, include=TRUE}
+# # For ease of analysis, convert the DADA2 outputs into a Phyloseq object, and filter out any necessary samples
+all(rownames(seqtab_nochim_rps10) %in% samdf_rps10) 
+rownames(samdf_rps10) <- samdf_rps10$sample_name
+
+samdata_rps10.ps <- sample_data(samdf_rps10)
+taxa_rps10.ps <- tax_table(as.matrix(taxa_rps10))
+
+seqtab.nochim_rps10.ps <- otu_table(seqtab_nochim_rps10, taxa_are_rows=FALSE)
+seqtab.nochim_rps10.ps@taxa_are_rows
+ps_rps10 <- phyloseq(seqtab.nochim_rps10.ps, samdata_rps10.ps, taxa_rps10.ps)
+
+#Add refseq slot
+dna <- Biostrings::DNAStringSet(taxa_names(ps_rps10))
+names(dna) <- taxa_names(ps_rps10)
+ps_rps10 <- merge_phyloseq(ps_rps10, dna)
+taxa_names(ps_rps10) <- paste0("ASV", seq(ntaxa(ps_rps10)))
+```
+
+### As a point of comparison, let's load our results from doing the analysis with demulticoder
+```{r prepare reads}
+seed <- 1
+set.seed(seed)
+
+#Now let's load the taxmap objects 
+load("demulticoder/obj_dada_rps10.RData") 
+obj_rps10<-obj_dada 
+
+taxmap_its<-load("demulticoder/obj_dada_its.RData")
+obj_rps10<-obj_dada
+
+#Third, let's load the phyloseq objects
+load("demulticoder/phylo_obj_rps10.RData")
+phylo_rps10<-phylo_obj
+
+load("demulticoder/phylo_obj_its.RData")
+phylo_its<-phylo_obj
+
+#Fourth, let's track reads
+track_reads_demulticoder_its<-read.csv("~/benchmark_demulticoder/demulticoder/track_reads_its.csv", row.names = 1)
+track_reads_demulticoder_rps10<-read.csv("~/benchmark_demulticoder/demulticoder/track_reads_rps10.csv", row.names = 1)
+```
+
+### Exploratory analysis-track reads throughout DADA2 analysis   
+Examine number of reads throughout the pipeline
+```{r track reads through DADA2 analysis, include=TRUE}
+track <- read.table("Data/RPS10/dada2_outputs/rps10_trackreads.out", sep="\t", stringsAsFactors = F, header=T)
+```
+
+### Let's start with exploratory barplots-for ITS dataset-first with regular workflow
+```{r Phyloseq demonstration rps10, fig.width=8, fig.height=7, message=FALSE}
+data <- objs$phyloseq_rps10 %>%
+  phyloseq::transform_sample_counts(function(x) {x/sum(x)} ) %>%
+  phyloseq::psmelt() %>%
+  dplyr::filter(Abundance > 0.2) %>%
+  dplyr::arrange(Genus)
+
+abund_plot <- ggplot2::ggplot(data, ggplot2::aes(x = Sample, y = Abundance, fill = Genus)) +
+  ggplot2::geom_bar(stat = "identity", position = "stack", color = "black", size = 0.2) +
+  ggplot2::scale_fill_viridis_d() +
+  ggplot2::theme_minimal() +
+  ggplot2::labs(
+    y = "Relative Abundance",
+    title = "Relative abundance of taxa by sample",
+    fill = "Genus"
+  ) +
+  ggplot2::theme(
+    axis.text.x = ggplot2::element_text(angle = 90, hjust = 1, vjust = 0.5, size = 10),
+    panel.grid.major = ggplot2::element_blank(),
+    panel.grid.minor = ggplot2::element_blank(),
+    legend.position = "top",
+    legend.text = ggplot2::element_text(size = 10),
+    legend.title = ggplot2::element_text(size = 10),  # Adjust legend title size
+    strip.text = ggplot2::element_text(size = 10),
+    strip.background = ggplot2::element_blank()
+  ) +
+  ggplot2::guides(
+    fill = ggplot2::guide_legend(
+      reverse = TRUE,
+      keywidth = 1,
+      keyheight = 1,
+      title.position = "top",
+      title.hjust = 0.5,  # Center the legend title
+      label.theme = ggplot2::element_text(size = 10)  # Adjust the size of the legend labels
+    )
+  )
+
+print(abund_plot)
+```
+### Let's start with exploratory barplots-for ITS dataset-next with with demulticoder workflow
+
+### Let's start with exploratory barplots-for RPS10 dataset-first with regular workflow
+
+### Let's start with exploratory barplots-for RPS10 dataset-next with with demulticoder workflow
+
+
+### Let's start with alpha diversity analyses-for ITS dataset-first with regular workflow
+
+### Let's start with alpha diversity analyses-for ITS dataset-next with with demulticoder workflow
+
+### Let's start with alpha diversity analyses-for RPS10 dataset-first with regular workflow
+
+### Let's start with alpha diversity analyses-for RPS10 dataset-next with with demulticoder workflow
+
+
+### Let's start with beta diversity analyses-for ITS dataset-first with regular workflow
+
+### Let's start with beta diversity analyses-for ITS dataset-next with with demulticoder workflow
+
+### Let's start with beta diversity analyses-for RPS10 dataset-first with regular workflow
+
+### Let's start with beta diversity analyses-for RPS10 dataset-next with with demulticoder workflow
+
+### Let's start with deseq2 diff abundance analyses-for ITS dataset-first with regular workflow
+
+### Let's start with deseq2 diff abundance analyse-for ITS dataset-next with with demulticoder workflow
+
+### Let's start with deseq2 diff abundance analyse-for RPS10 dataset-first with regular workflow
+
+### Let's start with deseq2 diff abundance analyse-for RPS10 dataset-next with with demulticoder workflow
+
+### Let's end with some brief summaries 
+
+```{r session info}
+sessioninfo::session_info()
+```
