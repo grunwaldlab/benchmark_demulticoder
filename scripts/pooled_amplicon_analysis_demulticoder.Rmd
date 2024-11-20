@@ -19,7 +19,10 @@ library(data.table); packageVersion("data.table")
 library(decontam); packageVersion("decontam")
 library(Biostrings); packageVersion("Biostrings")
 library(magick); packageVersion("magick")
+library(vegan); packageVersion("vegan")
 library(pdftools);packageVersion("pdftools")
+library(grid)
+library(gridExtra)
 knitr::opts_knit$set(root.dir = "~/benchmark_demulticoder")
 ```
 
@@ -28,33 +31,19 @@ knitr::opts_knit$set(root.dir = "~/benchmark_demulticoder")
 seed <- 1
 set.seed(seed)
 #Let's start by loading CSV files containing matrices themselves
-asv_matrix_rps10<-read.csv("demulticoder/final_asv_abundance_matrix_rps10.csv")
-asv_matrix_its<-read.csv("demulticoder/final_asv_abundance_matrix_its.csv")
+asv_matrix_rps10<-read.csv("demulticoder/data/final_asv_abundance_matrix_rps10.csv")
+asv_matrix_its<-read.csv("demulticoder/data/final_asv_abundance_matrix_its.csv")
 
 #For easier analysis, we previously combined the two matrices, and appended domain info to each one so we can make one heat tree for combined dataset
-abundance<-read.csv("demulticoder/final_asv_abundance_matrix_combined.csv")
+abundance<-read.csv("demulticoder/data/final_asv_abundance_matrix_combined.csv")
 
-metadata_path <- file.path("demulticoder/metadata.csv")
+metadata_path <- file.path("demulticoder/data/metadata.csv")
 metadata <- read_csv(metadata_path)
 print(metadata)
 
-#Now let's load the taxmap objects 
-load("demulticoder/obj_dada_rps10.RData") 
-obj_rps10<-obj_dada 
-
-taxmap_its<-load("demulticoder/obj_dada_its.RData")
-obj_rps10<-obj_dada
-
-#Third, let's load the phyloseq objects
-load("demulticoder/phylo_obj_rps10.RData")
-phylo_rps10<-phylo_obj
-
-load("demulticoder/phylo_obj_its.RData")
-phylo_its<-phylo_obj
-
 #Fourth, let's track reads
-track_reads_demulticoder_its<-read.csv("~/benchmark_demulticoder/demulticoder/track_reads_its.csv", row.names = 1)
-track_reads_demulticoder_rps10<-read.csv("~/benchmark_demulticoder/demulticoder/track_reads_rps10.csv", row.names = 1)
+track_reads_demulticoder_its<-read.csv("demulticoder/data/track_reads_its.csv", row.names = 1)
+track_reads_demulticoder_rps10<-read.csv("demulticoder/data/track_reads_rps10.csv", row.names = 1)
 ```
 
 ### Let's collect some summary stats for each dataset
@@ -162,7 +151,7 @@ if(exists("asv_matrix_its")) {
 First we will configure the combined taxmap object
 ```{r make taxmap object, fig.height=10, fig.width=6, message=FALSE}
 #load reference database
-rps10_database <- read_fasta("demulticoder/rps10_reference_db.fa")
+rps10_database <- read_fasta("demulticoder/data/rps10_reference_db.fa")
 innoc_species <- c(Cin = "Phytophthora_cinnamomi",  Plu = "Phytophthora_plurivora", Cry = "Pythium_cryptoirregulare")
 innoc_regex <- paste0('(', paste0(innoc_species, collapse = '|'), ')')
 innoc_seqs <- rps10_database[grepl(names(rps10_database), pattern = innoc_regex)]
@@ -181,7 +170,7 @@ align_mismatch <- function(alignment) {
 }
 
 # Align each sequence to each asv and make table of results"
-aligned_data_path <- file.path("demulticoder", "infection_aligned_data.rds")
+aligned_data_path <- file.path("demulticoder/data", "infection_aligned_data.rds")
 
 if (file.exists(aligned_data_path)) {
   aligned_data <- readRDS(aligned_data_path)
@@ -219,7 +208,7 @@ infection_data <- aligned_data %>%
 ## Update abundance matrix and metadata with results
 inoculum_asv_key <- setNames(infection_data$species, infection_data$asv_seq)
 abundance <- mutate(abundance, is_inoculum = sequence %in% infection_data$asv_seq, inoculum = inoculum_asv_key[sequence], .after = "dada2_tax")
-write_csv(abundance, file.path('demulticoder', 'abundance_with_infection_data.csv'))
+write_csv(abundance, file.path('demulticoder/data', 'abundance_with_infection_data.csv'))
 
 #Let's append metadata table with more info
 species_name_key <- c(Phytophthora_cinnamomi = "cin_prop", Phytophthora_plurivora = "plu_prop", Pythium_cryptoirregulare = "cry_prop")
@@ -289,7 +278,7 @@ metadata$valid_inoc <- (is.na(metadata$expected_innoc_prop) | metadata$expected_
 map_dbl(split(metadata$valid_inoc, metadata$organism), sum)
 
 # Save new metadata
-write_csv(metadata, file.path('demulticoder', 'metadata_with_infection_data.csv'))
+write_csv(metadata, file.path('demulticoder/data', 'metadata_with_infection_data.csv'))
 ```
 
 ### For the sample data, I will add columns for the proportion of reads in each sample representing each inoculum as well as a columns that indicate whether the expected inoculum was found, and if so, if it was the only inoculum found.
@@ -362,7 +351,7 @@ metadata$valid_inoc <- (is.na(metadata$expected_innoc_prop) | metadata$expected_
 map_dbl(split(metadata$valid_inoc, metadata$organism), sum)
 
 # Save new metadata
-write_csv(metadata, file.path('demulticoder', 'metadata_with_infection_data.csv'))
+write_csv(metadata, file.path('demulticoder/data', 'metadata_with_infection_data.csv'))
 ```
 
 ### Let's convert our new matrix and associated metadata table to a taxmap object
@@ -406,11 +395,11 @@ metadata <- metadata %>%
 
 ### Alpha diversity 
 ```{r}
-prob_table <- obj$data$prop[metadata$sample_name]
-metadata$richness <- vegan::specnumber(prob_table, MARGIN = 2)
-metadata$shannon <- vegan::diversity(prob_table, MARGIN = 2, index = "shannon")
-metadata$invsimpson <- vegan::diversity(prob_table, MARGIN = 2, index = "invsimpson")
-write.csv(metadata, file.path("demulticoder", "alpha_diversity.csv"))
+abund_table <- obj$data$abund[metadata$sample_name]
+metadata$richness <- vegan::specnumber(abund_table, MARGIN = 2)
+metadata$shannon <- vegan::diversity(abund_table, MARGIN = 2, index = "shannon")
+metadata$invsimpson <- vegan::diversity(abund_table, MARGIN = 2, index = "invsimpson")
+write.csv(metadata, file.path("demulticoder", "results/alpha_diversity.csv"))
 print(metadata)
 
 plotted_factors <- c('Organism' = 'organism', 'Flooded' = 'flooded', 'Pathogen Concentration' = 'path_conc', 'Trial' = 'experiment')
@@ -464,6 +453,7 @@ alpha_subplot <- ggplot(alpha_plot_data, aes(x = value, y = diversity)) +
 ## Beta diversity
 ```{r}
 set.seed(1)
+prob_table <- obj$data$prop[metadata$sample_name]
 nmds_plot_data <- function(prob_table) {
   metadata <- metadata[metadata$sample_name %in% colnames(prob_table), ]
   set.seed(1)
@@ -509,7 +499,7 @@ nmds_subplots <- map2(nmds_factors, names(nmds_factors), make_one_plot)
 nmds_plot <- ggpubr::ggarrange(plotlist = c(list(ggplot() + theme_void()), nmds_subplots),
                        nrow = 1, widths = c(0.15, 1, 1, 1, 1))
 
-ggsave(nmds_plot, path = "figures", filename = "nmds.pdf", 
+ggsave(nmds_plot, path = "demulticoder/figures", filename = "nmds.pdf", 
        width = 7, height = 8)
 print(nmds_plot)
 
@@ -517,19 +507,64 @@ combined_div_plot <- ggpubr::ggarrange(alpha_subplot, nmds_plot, ncol = 1, label
                                heights = c(1, 1))
 combined_div_plot
 
-ggsave(combined_div_plot, path = "figures", filename = "diversity.pdf", 
+ggsave(combined_div_plot, path = "demulticoder/figures", filename = "diversity.pdf", 
        width = 10, height = 6, bg = "#FFFFFF")
 
-ggsave(combined_div_plot, path = "figures", filename = "diversity.svg", 
+ggsave(combined_div_plot, path = "demulticoder/figures", filename = "diversity.svg", 
        width = 10, height = 6, bg = "#FFFFFF")
 ```
 
+### Let's do associated PERMANOVA analyses to better understand significance of differences in diversity between the 3 factors
+```{r PERMANOVA analysis}
+dist_matrix <- vegdist(t(prob_table), method = "bray")
+
+adonis2_full <- adonis2(dist_matrix ~ organism + flooded + path_conc + experiment, 
+                         data = metadata, 
+                         permutations = 999,
+                         method = "bray")
+
+print(adonis2_full)
+
+
+adonis2_org <- adonis2(dist_matrix ~ organism, 
+                         data = metadata, 
+                         permutations = 999,
+                         method = "bray")
+
+print(adonis2_org)
+
+
+adonis2_flooded <- adonis2(dist_matrix ~ flooded, 
+                         data = metadata, 
+                         permutations = 999,
+                         method = "bray")
+
+print(adonis2_flooded)
+
+adonis2_path_conc <- adonis2(dist_matrix ~ path_conc, 
+                         data = metadata, 
+                         permutations = 999,
+                         method = "bray")
+
+print(adonis2_path_conc)
+
+adonis2_experiment <- adonis2(dist_matrix ~ experiment, 
+                         data = metadata, 
+                         permutations = 999,
+                         method = "bray")
+
+print(adonis2_experiment)
+```
+
+
 ### Let's make new taxmap object in preparation to make heattree examining abundance and diversity of taxa in at least 10 samples
+
 ```{r diff heat tree setup}
 #Make sure our factors are input properly as factors
 metadata$path_conc <- as.factor(metadata$path_conc)
 metadata$organism <- as.factor(metadata$organism)
 metadata$flooded <- as.factor(metadata$flooded)
+metadata$experiment <- as.factor(metadata$experiment)
 
 abundance$is_low_abund <- rowSums(abundance[, metadata$sample_name]) < 5
 obj2 <- parse_tax_data(abundance, class_cols = 'dada2_tax', class_sep = ';',
@@ -557,14 +592,14 @@ max_boot <- setNames(max_boot$max, max_boot$taxon_id)
 obj_subset <- filter_taxa(obj_subset, max_boot[taxon_ids] >= min_bootstrap | taxon_ranks %in% c("ASV", "Reference"), reassign_obs = c(abund = TRUE, score = FALSE))
 ```
 
-### Let's make differential abundance plots for our combined dataset-first let's look at diff. abundance of taxa by inoculum
+### Let's make differential abundance plots for our combined dataset-first let's look at diff. abundance of taxa by inoculum concentration
 ```{r abundance plots-inoculum, fig.height=20, fig.width=20, message=FALSE, echo=FALSE}
 # Calculate difference between groups
 obj_subset$data$diff_table_conc <- calc_diff_abund_deseq2(obj_subset, data = "tax_abund",
                                                          cols = metadata$sample_name[!is.na(metadata$path_conc)],
                                                          groups = metadata$path_conc[!is.na(metadata$path_conc)])
 significant_taxon_ids <- unique(
-  obj_subset$data$diff_table_conc$taxon_id[! is.na(obj_subset$data$diff_table_conc$padj) & obj_subset$data$diff_table_conc$padj < 0.1]
+  obj_subset$data$diff_table_conc$taxon_id[! is.na(obj_subset$data$diff_table_conc$padj) & obj_subset$data$diff_table_conc$padj < 0.05]
 )
 
 range(obj_subset$data$diff_table_conc$padj, finite = TRUE) 
@@ -583,8 +618,8 @@ obj_subset %>%
                    node_color = ifelse(is.na(padj) | padj > 0.05, 0, log2FoldChange),
                    node_color_range = diverging_palette(),
                    node_color_trans = "linear",
-                   node_color_interval = c(-5, 5),
-                   edge_color_interval = c(-5, 5),
+                   node_color_interval = c(-8, 8),
+                   edge_color_interval = c(-8, 8),
                    node_size_range = c(.005, .035),
                    node_label_size_range = c(.015, .025),
                    node_size_trans = "log10",
@@ -593,7 +628,7 @@ obj_subset %>%
                    node_size_digits = 1,
                    seed=1000,
                    key_size = 0.5,
-                   output_file = file.path('figures', 'diff_taxon_abund_conc.pdf'))
+                   output_file = file.path('demulticoder/figures', 'diff_taxon_abund_conc.pdf'))
 ```
 
 ### Let's make differential abundance plots for our combined dataset-first let's look at diff. abundance of taxa by whether plots were flooded or not
@@ -607,7 +642,7 @@ obj_subset$data$diff_table_flood <- calc_diff_abund_deseq2(obj_subset, data = "t
                                                            cols = metadata$sample_name[!is.na(metadata$flooded)],
                                                            groups = metadata$flooded[!is.na(metadata$flooded)])
 significant_taxon_ids <- unique(
-  obj_subset$data$diff_table_flood$taxon_id[! is.na(obj_subset$data$diff_table_flood$padj) & obj_subset$data$diff_table_flood$padj < 0.1]
+  obj_subset$data$diff_table_flood$taxon_id[! is.na(obj_subset$data$diff_table_flood$padj) & obj_subset$data$diff_table_flood$padj < 0.05]
 )
 
 range(obj_subset$data$diff_table_flood$padj, finite = TRUE) 
@@ -623,15 +658,15 @@ obj_subset %>%
             node_size = tax_prop,
             node_color = ifelse(is.na(padj) | padj > 0.05, 0, log2FoldChange), # difference between groups
             node_color_trans = "linear",
-            node_color_interval = c(-5, 5),
-            edge_color_interval = c(-5, 5),
+            node_color_interval = c(-5.2, 5.2),
+            edge_color_interval = c(-5.15, 5.15),
             node_size_range = c(.005, .03),
             node_size_trans = "log10",
             node_label_size_range = c(.015, .02),
             node_color_range = diverging_palette(),
             node_size_axis_label = "Mean read proportion",
             node_color_axis_label = "Log2 fold change",
-            output_file = file.path('figures', 'diff_taxon_abund_flood.pdf'))
+            output_file = file.path('demulticoder/figures', 'diff_taxon_abund_flood.pdf'))
 ```
 
 ### Let's make differential abundance plots for our combined dataset-first let's look at diff. abundance of taxa by inoculum source
@@ -647,13 +682,14 @@ obj_subset$data$diff_table_org <- calc_diff_abund_deseq2(obj_subset, data = "tax
                                                          cols = metadata$sample_name[!is.na(metadata$organism)],
                                                          groups = metadata$organism[!is.na(metadata$organism)])
 significant_taxon_ids <- unique(
-  obj_subset$data$diff_table_org$taxon_id[! is.na(obj_subset$data$diff_table_org$padj) & obj_subset$data$diff_table_org$padj < 0.1]
+  obj_subset$data$diff_table_org$taxon_id[! is.na(obj_subset$data$diff_table_org$padj) & obj_subset$data$diff_table_org$padj < 0.05]
 )
 
-range(obj_subset$data$diff_table_flood$padj, finite = TRUE) 
-range(obj_subset$data$diff_table_flood$log2FoldChange, finite = TRUE) 
+range(obj_subset$data$diff_table_org$padj, finite = TRUE) 
+range(obj_subset$data$diff_table_org$log2FoldChange, finite = TRUE) 
 
 # Plot results (might take a few minutes)
+set.seed = 1000
 obj_subset %>%
   filter_taxa(taxon_ids %in% significant_taxon_ids, supertaxa = TRUE, reassign_obs = FALSE) %>%
   filter_taxa(! grepl(x = taxon_names, "_sp$"), reassign_obs = FALSE) %>%
@@ -665,8 +701,8 @@ obj_subset %>%
                    node_color = ifelse(is.na(padj) | padj > 0.05, 0, log2FoldChange),
                    node_color_range = diverging_palette(),
                    node_color_trans = "linear",
-                   node_color_interval = c(-5, 5),
-                   edge_color_interval = c(-5, 5),
+                   node_color_interval = c(-42.1, 42.1),
+                   edge_color_interval = c(-42.1, 42.1),
                    node_size_range = c(.005, .035),
                    node_label_size_range = c(.015, .025),
                    node_size_trans = "log10",
@@ -675,56 +711,106 @@ obj_subset %>%
                    node_size_digits = 1,
                    seed=1000,
                    key_size = 0.5,
-                   output_file = file.path('figures', 'diff_taxon_abund_organism.pdf'))
+                   output_file = file.path('demulticoder/figures', 'diff_taxon_abund_organism.pdf'))
+```
+
+### Let's make differential abundance plots for our combined dataset-first let's look at diff. abundance of taxa by whether pots were in trial 1 or 2
+```{r abundance plots-flood, fig.height=30, fig.width=30, message=FALSE, echo=FALSE}
+obj_subset <- obj2 %>%
+  filter_taxa(taxon_ranks == "Species", supertaxa = TRUE, reassign_obs = c(tax_abund = FALSE)) 
+
+
+# Calculate difference between groups
+obj_subset$data$diff_table_trial <- calc_diff_abund_deseq2(obj_subset, data = "tax_abund",
+                                                           cols = metadata$sample_name[!is.na(metadata$experiment)],
+                                                           groups = metadata$experiment[!is.na(metadata$experiment)])
+significant_taxon_ids <- unique(
+  obj_subset$data$diff_table_trial$taxon_id[! is.na(obj_subset$data$diff_table_trial$padj) & obj_subset$data$diff_table_trial$padj < 0.05]
+)
+
+range(obj_subset$data$diff_table_trial$padj, finite = TRUE) 
+range(obj_subset$data$diff_table_trial$log2FoldChange, finite = TRUE) 
+
+set.seed = 1000
+obj_subset %>%
+  filter_taxa(taxon_ids %in% significant_taxon_ids, supertaxa = TRUE, reassign_obs = FALSE) %>%
+  filter_taxa(! grepl(x = taxon_names, "_sp$"), reassign_obs = FALSE) %>%
+  filter_taxa(! grepl(x = taxon_names, "incertae_sedis", ignore.case = TRUE), reassign_obs = FALSE) %>%
+  remove_redundant_names() %>%
+  heat_tree(node_label = taxon_names,
+            node_size = tax_prop,
+            node_color = ifelse(is.na(padj) | padj > 0.05, 0, log2FoldChange), # difference between groups
+            node_color_trans = "linear",
+            node_color_interval = c(-27, 27),
+            edge_color_interval = c(-27, 27),
+            node_size_range = c(.005, .03),
+            node_size_trans = "log10",
+            node_label_size_range = c(.015, .02),
+            node_color_range = diverging_palette(),
+            node_size_axis_label = "Mean read proportion",
+            node_color_axis_label = "Log2 fold change",
+            output_file = file.path('demulticoder/figures', 'diff_taxon_abund_trial.pdf'))
 ```
 
 ### Let's try to facet these plots. 
 ```{r facet abundance plots, fig.height=30, fig.width=30, message=FALSE, echo=FALSE}
-conc_img <- magick::image_read_pdf("figures/diff_taxon_abund_conc.pdf")
-conc_grob <- grid::rasterGrob(image = as.raster(conc_img))
+# Read the images
+conc_img <- magick::image_read_pdf("demulticoder/figures/diff_taxon_abund_conc.pdf")
+trial_img <- magick::image_read_pdf("demulticoder/figures/diff_taxon_abund_trial.pdf")
+flood_img <- magick::image_read_pdf("demulticoder/figures/diff_taxon_abund_flood.pdf")
+org_img <- magick::image_read_pdf("demulticoder/figures/diff_taxon_abund_organism.pdf")
 
-flood_img <- magick::image_read_pdf("figures/diff_taxon_abund_flood.pdf")
-flood_grob <- grid::rasterGrob(image = as.raster(flood_img))
+# Convert to grobs
+conc_grob <- grid::rasterGrob(as.raster(conc_img))
+trial_grob <- grid::rasterGrob(as.raster(trial_img))
+flood_grob <- grid::rasterGrob(as.raster(flood_img))
+org_grob <- grid::rasterGrob(as.raster(org_img))
 
-org_img <- magick::image_read_pdf("figures/diff_taxon_abund_organism.pdf")
-org_grob <- grid::rasterGrob(image = as.raster(org_img))
+# Create a layout with larger bottom plots
+pdf("demulticoder/figures/combined_heat_trees.pdf", width=12, height=10)
+grid.newpage()
+pushViewport(viewport(layout = grid.layout(3, 2, 
+                                           heights = unit(c(0.1, 1, 1.5), "null"),
+                                           widths = unit(c(1, 1), "null"))))
 
-combined_figure <- ggpubr::ggarrange(
-  flood_grob,
-  org_grob,
-  conc_grob,
-  ncol = 1,
-  nrow = 3,
-  heights = c(1, 1.5, 1.5),
-  labels = c("A.", "B.", "C."),
-  font.label = list(size = 20, face = "bold")
-  )
+# Function to place grobs with labels
+place_grob <- function(grob, row, col, label) {
+  pushViewport(viewport(layout.pos.row = row, layout.pos.col = col))
+  grid.text(label, y = unit(1, "npc") + unit(0.5, "lines"), 
+            gp = gpar(fontsize = 12, fontface = "bold"))
+  pushViewport(viewport(height = unit(0.9, "npc")))
+  grid.draw(grob)
+  upViewport(2)
+}
 
-# Save the combined figure
-ggsave(
-  "figures/combined_heat_trees.pdf",
-  combined_figure,
-  width = 12,
-  height = 24,
-  units = "in",
-  dpi = 600
-)
+# Place grobs with labels
+place_grob(flood_grob, 2, 1, "A. Flooding Status")
+place_grob(trial_grob, 2, 2, "B. Trial")
+place_grob(org_grob, 3, 1, "C. Organism")
+place_grob(conc_grob, 3, 2, "D. Pathogen Concentration")
 
-#Let's also make SVG figure
-ggsave(
-  "figures/combined_heat_trees.svg",
-  combined_figure,
-  width = 12,
-  height = 24,
-  units = "in",
-  dpi = 600
-)
+dev.off()
+
+# SVG version
+svg("demulticoder/figures/combined_heat_trees.svg", width=12, height=10)
+grid.newpage()
+pushViewport(viewport(layout = grid.layout(3, 2, 
+                                           heights = unit(c(0.1, 1, 1.5), "null"),
+                                           widths = unit(c(1, 1), "null"))))
+
+# Repeat the same placement for SVG
+place_grob(flood_grob, 2, 1, "A. Flooding Status")
+place_grob(trial_grob, 2, 2, "B. Trial")
+place_grob(org_grob, 3, 1, "C. Organism")
+place_grob(conc_grob, 3, 2, "D. Pathogen Concentration (CFUs/G")
+
+dev.off()
 ```
 
 ### Let's finally make an exploratory heat tree to look at community composition across all samples, just retaining ASVs present at least 10 times
 
 ### Overall community plot
-```{r}
+```{r, overall community plot}
 obj_subset <- obj2 %>%
   filter_taxa(taxon_ranks == "Species", supertaxa = TRUE, reassign_obs = c(tax_abund = FALSE)) 
 min_bootstrap <- 60
@@ -775,7 +861,7 @@ obj_subset %>%
             edge_color_digits = 2,
             edge_size_digits = 2,
             #aspect_ratio = 1.618,
-            output_file = file.path('figures', '/supp_figure_2_whole_community.pdf'))
+            output_file = file.path('demulticoder/figures', '/supp_figure_2_whole_community.pdf'))
 ```
 
 ```{r session info}
