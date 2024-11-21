@@ -30,9 +30,16 @@ knitr::opts_knit$set(root.dir = "~/benchmark_demulticoder")
 ```{r prepare reads}
 seed <- 1
 set.seed(seed)
-#Let's start by loading CSV files containing matrices themselves
+
 asv_matrix_rps10<-read.csv("demulticoder/data/final_asv_abundance_matrix_rps10.csv")
+combined_df_its$dada2_tax <- gsub("Fungi", "Eukaryota--100--Domain;Fungi", combined_df_its$dada2_tax)
+
 asv_matrix_its<-read.csv("demulticoder/data/final_asv_abundance_matrix_its.csv")
+combined_df_its$dada2_tax <- gsub("Fungi", "Eukaryota--100--Domain;Fungi", combined_df_its$dada2_tax)
+
+#We need to add Domain info first,before combining heattrees
+#Let's combine these matrices
+
 
 #For easier analysis, we previously combined the two matrices, and appended domain info to each one so we can make one heat tree for combined dataset
 abundance<-read.csv("demulticoder/data/final_asv_abundance_matrix_combined.csv")
@@ -618,8 +625,8 @@ obj_subset %>%
                    node_color = ifelse(is.na(padj) | padj > 0.05, 0, log2FoldChange),
                    node_color_range = diverging_palette(),
                    node_color_trans = "linear",
-                   node_color_interval = c(-8, 8),
-                   edge_color_interval = c(-8, 8),
+                   node_color_interval = c(-5, 5),
+                   edge_color_interval = c(-5, 5),
                    node_size_range = c(.005, .035),
                    node_label_size_range = c(.015, .025),
                    node_size_trans = "log10",
@@ -659,7 +666,7 @@ obj_subset %>%
             node_color = ifelse(is.na(padj) | padj > 0.05, 0, log2FoldChange), # difference between groups
             node_color_trans = "linear",
             node_color_interval = c(-5.2, 5.2),
-            edge_color_interval = c(-5.15, 5.15),
+            edge_color_interval = c(-5.2, 5.2),
             node_size_range = c(.005, .03),
             node_size_trans = "log10",
             node_label_size_range = c(.015, .02),
@@ -835,7 +842,7 @@ obj_subset$data$tax_data$rel_stand_dev <- map_dbl(1:nrow(obj_subset$data$tax_abu
 })
 obj_subset
 
-set.seed(1)
+set.seed(1000)
 obj_subset %>%
   filter_taxa(! is_stem) %>%
   filter_taxa(n_samples >= 10, supertaxa = TRUE, reassign_obs = FALSE) %>%

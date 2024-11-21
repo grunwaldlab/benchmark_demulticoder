@@ -14,8 +14,6 @@ library(dada2); packageVersion("dada2")
 library(dada2); packageVersion("Biostrings")
 library(ShortRead); packageVersion("ShortRead")
 library(parallel); packageVersion("parallel")
-
-set.seed(1)
 ```
 
 ### Workflow is similar to what is described in the rps10 tutorial in DADA2 documentation, but since amplicons were pooled, I need to first demultiplex rps10 reads within sample, or else rps10 reads will still be included in all downstream steps
