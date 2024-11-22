@@ -32,19 +32,33 @@ seed <- 1
 set.seed(seed)
 
 asv_matrix_rps10<-read.csv("demulticoder/data/final_asv_abundance_matrix_rps10.csv")
-combined_df_its$dada2_tax <- gsub("Fungi", "Eukaryota--100--Domain;Fungi", combined_df_its$dada2_tax)
+asv_matrix_rps10$dada2_tax <- asv_matrix_rps10$dada2_tax <- gsub("Stramenopila", "Eukaryota--100--Domain;Stramenopila", asv_matrix_rps10$dada2_tax)
+asv_matrix_rps10 <- asv_matrix_rps10[, -1]
+colnames(asv_matrix_rps10)[3:ncol(asv_matrix_rps10)] <- gsub("_rps10$", "", colnames(asv_matrix_rps10)[3:ncol(asv_matrix_rps10)])
 
 asv_matrix_its<-read.csv("demulticoder/data/final_asv_abundance_matrix_its.csv")
-combined_df_its$dada2_tax <- gsub("Fungi", "Eukaryota--100--Domain;Fungi", combined_df_its$dada2_tax)
+asv_matrix_its$dada2_tax <- gsub("Fungi", "Eukaryota--100--Domain;Fungi", asv_matrix_its$dada2_tax)
+asv_matrix_its <- asv_matrix_its[, -1]
+colnames(asv_matrix_its)[3:ncol(asv_matrix_rps10)] <- gsub("_its$", "", colnames(asv_matrix_its)[3:ncol(asv_matrix_its)])
 
-#We need to add Domain info first,before combining heattrees
+
 #Let's combine these matrices
-
-
 #For easier analysis, we previously combined the two matrices, and appended domain info to each one so we can make one heat tree for combined dataset
-abundance<-read.csv("demulticoder/data/final_asv_abundance_matrix_combined.csv")
+sample_cols_its <- setdiff(names(asv_matrix_its), c("sequence", "dada2_tax"))
+sample_cols_rps10 <- setdiff(names(asv_matrix_rps10), c("sequence", "dada2_tax"))
 
-metadata_path <- file.path("demulticoder/data/metadata.csv")
+if(!all(sample_cols_its == sample_cols_rps10)) {
+  stop("Sample columns do not match between ITS and RPS10 dataframes!")
+}
+
+abundance <- rbind(
+ asv_matrix_its[, c("sequence", "dada2_tax", sample_cols_its)],  # ITS data
+  asv_matrix_rps10[, c("sequence", "dada2_tax", sample_cols_rps10)]  # RPS10 data
+)
+
+write.csv(abundance, "demulticoder/data/final_asv_abundance_matrix_combined_demulticoder.csv")
+
+metadata_path <- file.path("standard_workflow/combined_data/")
 metadata <- read_csv(metadata_path)
 print(metadata)
 
@@ -794,23 +808,7 @@ place_grob <- function(grob, row, col, label) {
 place_grob(flood_grob, 2, 1, "A. Flooding Status")
 place_grob(trial_grob, 2, 2, "B. Trial")
 place_grob(org_grob, 3, 1, "C. Organism")
-place_grob(conc_grob, 3, 2, "D. Pathogen Concentration")
-
-dev.off()
-
-# SVG version
-svg("demulticoder/figures/combined_heat_trees.svg", width=12, height=10)
-grid.newpage()
-pushViewport(viewport(layout = grid.layout(3, 2, 
-                                           heights = unit(c(0.1, 1, 1.5), "null"),
-                                           widths = unit(c(1, 1), "null"))))
-
-# Repeat the same placement for SVG
-place_grob(flood_grob, 2, 1, "A. Flooding Status")
-place_grob(trial_grob, 2, 2, "B. Trial")
-place_grob(org_grob, 3, 1, "C. Organism")
-place_grob(conc_grob, 3, 2, "D. Pathogen Concentration (CFUs/G")
-
+place_grob(conc_grob, 3, 2, "D. Pathogen Concentration (CFUs/G)")
 dev.off()
 ```
 

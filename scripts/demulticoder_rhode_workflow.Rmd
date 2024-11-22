@@ -3,7 +3,7 @@ title: "demulticoder rhododendron rhizobiome workflow"
 output: html_document
 date: "2024-06-18"
 ---
-## Demonstration on how to use demulticoder on a dataset that is actually three separate datasets (RPS10, ITS, and 16S)
+## Demonstration on how to use demulticoder on a dataset that is actually comprised of samples with pooled ITS and rps10 amplicons. 
 
 Input metadata and primerinfo_params files are in data folder
 
@@ -19,7 +19,7 @@ library("demulticoder")
 ```{r prepare reads}
 outputs<-prepare_reads(
   data_directory = "data", 
-  output_directory = "demulticoder_outputs_10_31", 
+  output_directory = "demulticoder_outputs", 
   tempdir_path="~/temp",
   overwrite_existing = FALSE)
 ```
