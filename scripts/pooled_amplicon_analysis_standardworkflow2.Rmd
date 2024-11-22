@@ -45,7 +45,7 @@ set.seed(seed)
 ### Demonstration of how to use demulticoder on a dataset that has pooled amplicons (RPS10 and ITS), and how generalized analysis would be done if you didn't use demulticoder. A more nuanced analysis is shown in 'pooled_amplicoin_analysis_demulticoder.Rmd'
 
 ### Let's also load files from the standard worfklows for its and dataset rps10 datasets, and combine. We'll then make a combined matrix that is analogous to what was done with the demulticoder analysis
-```{r load files standard workflow}
+```{r load files standard workflow its}
 
 
 taxa_its<- read.table("standard_workflow/its/data/its_taxa.out", sep="\t", stringsAsFactors=F,header=T)
@@ -114,12 +114,12 @@ write.csv(combined_df_its, "standard_workflow/its/data/its_abundance_matrix_comb
 ```
 
 ### Track number of reads throughout the pipeline
-```{r track reads through DADA2 analysis, include=TRUE}
+```{r track reads through DADA2 analysis its, include=TRUE}
 track_reads_standard_wf_its <- read.table("standard_workflow/its/data/its_trackreads.out", sep="\t", stringsAsFactors = F, header=T)
 ```
 
 ### Let's also do the same for the rps10 dataset
-```{r load files standard workflow}
+```{r load files standard workflow rps10}
 taxa_rps10<- read.table("standard_workflow/rps10/data/rps10_taxa.out", sep="\t", stringsAsFactors=F,header=T)
 
 taxa_filt_rps10 <- taxa_rps10 %>%
@@ -184,7 +184,7 @@ samdf_rps10<- read.csv("standard_workflow/rps10/data/metadata_rps10.csv")
 ```
 
 ### Track number of reads throughout the pipeline
-```{r track reads through DADA2 analysis, include=TRUE}
+```{r track reads through DADA2 analysis rps10, include=TRUE}
 track_reads_standard_wf_rps10 <- read.table("standard_workflow/rps10/data/rps10_trackreads.out", sep="\t", stringsAsFactors = F, header=T)
 ```
 
@@ -208,6 +208,7 @@ write.csv(abundance, "standard_workflow/combined_data/final_combined_abundance_m
 metadata_path <- file.path("standard_workflow/combined_data/metadata.csv")
 metadata <- read_csv(metadata_path)
 print(metadata)
+
 ```
 
 ### Now, let's proceed with our analogous analysis to demulticoder analysis
@@ -727,10 +728,18 @@ print(adonis2_experiment)
 
 ```{r diff heat tree setup}
 #Make sure our factors are input properly as factors
+#Make sure our factors are input properly as factors
 metadata$path_conc <- as.factor(metadata$path_conc)
+metadata$path_conc<- factor(metadata$path_conc, levels = c("0", "1", "100"))
+
 metadata$organism <- as.factor(metadata$organism)
+metadata$organism<- factor(metadata$organism, levels = c("Control", "Cin", "Cry", "Plu"))
+
 metadata$flooded <- as.factor(metadata$flooded)
+metadata$flooded <- factor(metadata$flooded, levels = c("TRUE", "FALSE"))
+
 metadata$experiment <- as.factor(metadata$experiment)
+metadata$experiment<- factor(metadata$experiment, levels = c("1", "2"))
 
 abundance$is_low_abund <- rowSums(abundance[, metadata$sample_name]) < 5
 obj2 <- parse_tax_data(abundance, class_cols = 'dada2_tax', class_sep = ';',
@@ -884,7 +893,7 @@ obj_subset %>%
 ```
 
 ### Let's make differential abundance plots for our combined dataset-first let's look at diff. abundance of taxa by whether pots were in trial 1 or 2
-```{r abundance plots-flood, fig.height=30, fig.width=30, message=FALSE, echo=FALSE}
+```{r abundance plots-trial, fig.height=30, fig.width=30, message=FALSE, echo=FALSE}
 obj_subset <- obj2 %>%
   filter_taxa(taxon_ranks == "Species", supertaxa = TRUE, reassign_obs = c(tax_abund = FALSE)) 
 
@@ -995,6 +1004,7 @@ obj_subset %>%
   filter_taxa(n_samples >= 10, supertaxa = TRUE, reassign_obs = FALSE) %>%
   filter_taxa(! grepl(x = taxon_names, "_sp$"), reassign_obs = FALSE) %>%
   filter_taxa(! grepl(x = taxon_names, "incertae_sedis", ignore.case = TRUE), reassign_obs = FALSE) %>%
+  filter_taxa(! grepl(x = taxon_names, "NA", ignore.case = TRUE), reassign_obs = FALSE) %>%
   remove_redundant_names() %>%
   heat_tree(node_size = mean_prop,
             edge_size = n_samples,
@@ -1015,7 +1025,7 @@ obj_subset %>%
             edge_color_digits = 2,
             edge_size_digits = 2,
             #aspect_ratio = 1.618,
-            output_file = file.path('standard_workflow/combined_figures', '/supp_figure_2_whole_community.pdf'))
+            output_file = file.path('standard_workflow/combined_figures', '/heattree_mostabund_taxa.pdf'))
 ```
 
 ```{r session info}

@@ -21,6 +21,7 @@ library(Biostrings); packageVersion("Biostrings")
 library(magick); packageVersion("magick")
 library(vegan); packageVersion("vegan")
 library(pdftools);packageVersion("pdftools")
+library(vegan); packageVersion("vegan")
 library(grid)
 library(gridExtra)
 knitr::opts_knit$set(root.dir = "~/benchmark_demulticoder")
@@ -578,13 +579,20 @@ print(adonis2_experiment)
 ```
 
 
-### Let's make new taxmap object in preparation to make heattree examining abundance and diversity of taxa in at least 10 samples
+### Let's make new taxmap object in preparation to make heattree examining abundance and diversity of taxa in at least 5 samples
 ```{r diff heat tree setup}
 #Make sure our factors are input properly as factors
 metadata$path_conc <- as.factor(metadata$path_conc)
+metadata$path_conc<- factor(metadata$path_conc, levels = c("0", "1", "100"))
+
 metadata$organism <- as.factor(metadata$organism)
+metadata$organism<- factor(metadata$organism, levels = c("Control", "Cin", "Cry", "Plu"))
+
 metadata$flooded <- as.factor(metadata$flooded)
+metadata$flooded <- factor(metadata$flooded, levels = c("TRUE", "FALSE"))
+
 metadata$experiment <- as.factor(metadata$experiment)
+metadata$experiment<- factor(metadata$experiment, levels = c("1", "2"))
 
 abundance$is_low_abund <- rowSums(abundance[, metadata$sample_name]) < 5
 obj2 <- parse_tax_data(abundance, class_cols = 'dada2_tax', class_sep = ';',
@@ -625,7 +633,7 @@ significant_taxon_ids <- unique(
 range(obj_subset$data$diff_table_conc$padj, finite = TRUE) 
 range(obj_subset$data$diff_table_conc$log2FoldChange, finite = TRUE) 
 
-
+set.seed = 1000
 # Plot results (might take a few minutes)
 obj_subset %>%
   filter_taxa(taxon_ids %in% significant_taxon_ids, supertaxa = TRUE, reassign_obs = FALSE) %>%
@@ -864,7 +872,7 @@ obj_subset %>%
             edge_color_digits = 2,
             edge_size_digits = 2,
             #aspect_ratio = 1.618,
-            output_file = file.path('demulticoder/figures', '/supp_figure_2_whole_community.pdf'))
+            output_file = file.path('demulticoder/figures', '/heattree_mostabund_taxa.pdf'))
 ```
 
 ```{r session info}
