@@ -1,5 +1,5 @@
 ---
-title: "Pooled amplicon example"
+title: "Pooled amplicon example-standard DADA2 workflow"
 output: 
   rmarkdown::html_vignette:
     fig_path: "man/figures"
@@ -196,6 +196,11 @@ abundance <- rbind(
 )
 
 write.csv(abundance, "standard_workflow/combined_data/final_combined_abundance_matrix_standard_workflow.csv")
+
+#Let's also load metadata file-consistent with demulticoder analysis
+metadata_path <- file.path("standard_workflow/combined_data/metadata.csv")
+metadata <- read_csv(metadata_path)
+print(metadata)
 ```
 
 ### Now, let's proceed with our analogous analysis to demulticoder analysis
@@ -362,7 +367,7 @@ metadata <-samdf_its
 ## Update abundance matrix and metadata with results
 inoculum_asv_key <- setNames(infection_data$species, infection_data$asv_seq)
 abundance <- mutate(abundance, is_inoculum = sequence %in% infection_data$asv_seq, inoculum = inoculum_asv_key[sequence], .after = "dada2_tax")
-write_csv(abundance, file.path('standard_worklow/combined_data', 'abundance_with_infection_data.csv'))
+write_csv(abundance, file.path('standard_workflow/combined_data', 'abundance_with_infection_data.csv'))
 
 #Let's append metadata table with more info
 species_name_key <- c(Phytophthora_cinnamomi = "cin_prop", Phytophthora_plurivora = "plu_prop", Pythium_cryptoirregulare = "cry_prop")
@@ -432,7 +437,7 @@ metadata$valid_inoc <- (is.na(metadata$expected_innoc_prop) | metadata$expected_
 map_dbl(split(metadata$valid_inoc, metadata$organism), sum)
 
 # Save new metadata
-write_csv(metadata, file.path('standard_workflow/data', 'metadata_with_infection_data.csv'))
+write_csv(metadata, file.path('standard_workflow/combined_data', 'metadata_with_infection_data.csv'))
 ```
 
 ### For the sample data, I will add columns for the proportion of reads in each sample representing each inoculum as well as a columns that indicate whether the expected inoculum was found, and if so, if it was the only inoculum found.
@@ -653,7 +658,7 @@ nmds_subplots <- map2(nmds_factors, names(nmds_factors), make_one_plot)
 nmds_plot <- ggpubr::ggarrange(plotlist = c(list(ggplot() + theme_void()), nmds_subplots),
                        nrow = 1, widths = c(0.15, 1, 1, 1, 1))
 
-ggsave(nmds_plot, path = "demulticoder/figures", filename = "nmds.pdf", 
+ggsave(nmds_plot, path = "standard_workflow/combined_figures", filename = "nmds.pdf", 
        width = 7, height = 8)
 print(nmds_plot)
 
@@ -661,10 +666,10 @@ combined_div_plot <- ggpubr::ggarrange(alpha_subplot, nmds_plot, ncol = 1, label
                                heights = c(1, 1))
 combined_div_plot
 
-ggsave(combined_div_plot, path = "demulticoder/figures", filename = "diversity.pdf", 
+ggsave(combined_div_plot, path = "standard_workflow/combined_figures", filename = "diversity.pdf", 
        width = 10, height = 6, bg = "#FFFFFF")
 
-ggsave(combined_div_plot, path = "demulticoder/figures", filename = "diversity.svg", 
+ggsave(combined_div_plot, path = "standard_workflow/combined_figures", filename = "diversity.svg", 
        width = 10, height = 6, bg = "#FFFFFF")
 ```
 
