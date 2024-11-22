@@ -34,13 +34,20 @@ library(forcats); packageVersion("forcats")
 library(Biostrings); packageVersion("Biostrings")
 library(magick); packageVersion("magick")
 library(pdftools);packageVersion("pdftools")
+library(vegan); packageVersion("vegan")
+library(grid); packageVersion("grid")
 knitr::opts_knit$set(root.dir = "~/benchmark_demulticoder")
+
+seed <- 1
+set.seed(seed)
 ```
 
 ### Demonstration of how to use demulticoder on a dataset that has pooled amplicons (RPS10 and ITS), and how generalized analysis would be done if you didn't use demulticoder. A more nuanced analysis is shown in 'pooled_amplicoin_analysis_demulticoder.Rmd'
 
 ### Let's also load files from the standard worfklows for its and dataset rps10 datasets, and combine. We'll then make a combined matrix that is analogous to what was done with the demulticoder analysis
 ```{r load files standard workflow}
+
+
 taxa_its<- read.table("standard_workflow/its/data/its_taxa.out", sep="\t", stringsAsFactors=F,header=T)
 
 taxa_filt_its <- taxa_its %>%
@@ -716,7 +723,7 @@ print(adonis2_experiment)
 ```
 
 
-### Let's make new taxmap object in preparation to make heattree examining abundance and diversity of taxa in at least 10 samples
+### Let's make new taxmap object in preparation to make heattree examining abundance and diversity of taxa in at least 5 samples
 
 ```{r diff heat tree setup}
 #Make sure our factors are input properly as factors
@@ -770,6 +777,7 @@ obj_subset %>%
   filter_taxa(taxon_ids %in% significant_taxon_ids, supertaxa = TRUE, reassign_obs = FALSE) %>%
   filter_taxa(! grepl(x = taxon_names, "_sp$"), reassign_obs = FALSE) %>%
   filter_taxa(! grepl(x = taxon_names, "incertae_sedis", ignore.case = TRUE), reassign_obs = FALSE) %>%
+  filter_taxa(! grepl(x = taxon_names, "NA", ignore.case = TRUE), reassign_obs = FALSE) %>%
   remove_redundant_names() %>%
   heat_tree_matrix(data = "diff_table_conc",
                    node_size = tax_prop,
@@ -777,8 +785,8 @@ obj_subset %>%
                    node_color = ifelse(is.na(padj) | padj > 0.05, 0, log2FoldChange),
                    node_color_range = diverging_palette(),
                    node_color_trans = "linear",
-                   node_color_interval = c(-5, 5),
-                   edge_color_interval = c(-5, 5),
+                   node_color_interval = c(-10, 10),
+                   edge_color_interval = c(-10, 10),
                    node_size_range = c(.005, .035),
                    node_label_size_range = c(.015, .025),
                    node_size_trans = "log10",
@@ -787,7 +795,7 @@ obj_subset %>%
                    node_size_digits = 1,
                    seed=1000,
                    key_size = 0.5,
-                   output_file = file.path('demulticoder/figures', 'diff_taxon_abund_conc.pdf'))
+                   output_file = file.path('standard_workflow/combined_figures', 'diff_taxon_abund_conc.pdf'))
 ```
 
 ### Let's make differential abundance plots for our combined dataset-first let's look at diff. abundance of taxa by whether plots were flooded or not
@@ -812,6 +820,7 @@ obj_subset %>%
   filter_taxa(taxon_ids %in% significant_taxon_ids, supertaxa = TRUE, reassign_obs = FALSE) %>%
   filter_taxa(! grepl(x = taxon_names, "_sp$"), reassign_obs = FALSE) %>%
   filter_taxa(! grepl(x = taxon_names, "incertae_sedis", ignore.case = TRUE), reassign_obs = FALSE) %>%
+  filter_taxa(! grepl(x = taxon_names, "NA", ignore.case = TRUE), reassign_obs = FALSE) %>%
   remove_redundant_names() %>%
   heat_tree(node_label = taxon_names,
             node_size = tax_prop,
@@ -825,7 +834,7 @@ obj_subset %>%
             node_color_range = diverging_palette(),
             node_size_axis_label = "Mean read proportion",
             node_color_axis_label = "Log2 fold change",
-            output_file = file.path('demulticoder/figures', 'diff_taxon_abund_flood.pdf'))
+            output_file = file.path('standard_workflow/combined_figures', 'diff_taxon_abund_flood.pdf'))
 ```
 
 ### Let's make differential abundance plots for our combined dataset-first let's look at diff. abundance of taxa by inoculum source
@@ -853,6 +862,7 @@ obj_subset %>%
   filter_taxa(taxon_ids %in% significant_taxon_ids, supertaxa = TRUE, reassign_obs = FALSE) %>%
   filter_taxa(! grepl(x = taxon_names, "_sp$"), reassign_obs = FALSE) %>%
   filter_taxa(! grepl(x = taxon_names, "incertae_sedis", ignore.case = TRUE), reassign_obs = FALSE) %>%
+  filter_taxa(! grepl(x = taxon_names, "NA", ignore.case = TRUE), reassign_obs = FALSE) %>%
   remove_redundant_names() %>%
   heat_tree_matrix(data = "diff_table_org",
                    node_size = tax_prop,
@@ -870,7 +880,7 @@ obj_subset %>%
                    node_size_digits = 1,
                    seed=1000,
                    key_size = 0.5,
-                   output_file = file.path('demulticoder/figures', 'diff_taxon_abund_organism.pdf'))
+                   output_file = file.path('standard_workflow/combined_figures', 'diff_taxon_abund_organism.pdf'))
 ```
 
 ### Let's make differential abundance plots for our combined dataset-first let's look at diff. abundance of taxa by whether pots were in trial 1 or 2
@@ -895,29 +905,30 @@ obj_subset %>%
   filter_taxa(taxon_ids %in% significant_taxon_ids, supertaxa = TRUE, reassign_obs = FALSE) %>%
   filter_taxa(! grepl(x = taxon_names, "_sp$"), reassign_obs = FALSE) %>%
   filter_taxa(! grepl(x = taxon_names, "incertae_sedis", ignore.case = TRUE), reassign_obs = FALSE) %>%
+  filter_taxa(! grepl(x = taxon_names, "NA", ignore.case = TRUE), reassign_obs = FALSE) %>%
   remove_redundant_names() %>%
   heat_tree(node_label = taxon_names,
             node_size = tax_prop,
             node_color = ifelse(is.na(padj) | padj > 0.05, 0, log2FoldChange), # difference between groups
             node_color_trans = "linear",
-            node_color_interval = c(-27, 27),
-            edge_color_interval = c(-27, 27),
+            node_color_interval = c(-26, 26),
+            edge_color_interval = c(-26, 26),
             node_size_range = c(.005, .03),
             node_size_trans = "log10",
             node_label_size_range = c(.015, .02),
             node_color_range = diverging_palette(),
             node_size_axis_label = "Mean read proportion",
             node_color_axis_label = "Log2 fold change",
-            output_file = file.path('demulticoder/figures', 'diff_taxon_abund_trial.pdf'))
+            output_file = file.path('standard_workflow/combined_figures', 'diff_taxon_abund_trial.pdf'))
 ```
 
 ### Let's try to facet these plots. 
 ```{r facet abundance plots, fig.height=30, fig.width=30, message=FALSE, echo=FALSE}
 # Read the images
-conc_img <- magick::image_read_pdf("demulticoder/figures/diff_taxon_abund_conc.pdf")
-trial_img <- magick::image_read_pdf("demulticoder/figures/diff_taxon_abund_trial.pdf")
-flood_img <- magick::image_read_pdf("demulticoder/figures/diff_taxon_abund_flood.pdf")
-org_img <- magick::image_read_pdf("demulticoder/figures/diff_taxon_abund_organism.pdf")
+conc_img <- magick::image_read_pdf("standard_workflow/combined_figures/diff_taxon_abund_conc.pdf")
+trial_img <- magick::image_read_pdf("standard_workflow/combined_figures/diff_taxon_abund_trial.pdf")
+flood_img <- magick::image_read_pdf("standard_workflow/combined_figures/diff_taxon_abund_flood.pdf")
+org_img <- magick::image_read_pdf("standard_workflow/combined_figures/diff_taxon_abund_organism.pdf")
 
 # Convert to grobs
 conc_grob <- grid::rasterGrob(as.raster(conc_img))
@@ -926,8 +937,8 @@ flood_grob <- grid::rasterGrob(as.raster(flood_img))
 org_grob <- grid::rasterGrob(as.raster(org_img))
 
 # Create a layout with larger bottom plots
-pdf("demulticoder/figures/combined_heat_trees.pdf", width=12, height=10)
-grid.newpage()
+pdf("standard_workflow/combined_figures/combined_heat_trees.pdf", width=12, height=10)
+grid::grid.newpage()
 pushViewport(viewport(layout = grid.layout(3, 2, 
                                            heights = unit(c(0.1, 1, 1.5), "null"),
                                            widths = unit(c(1, 1), "null"))))
@@ -1004,7 +1015,7 @@ obj_subset %>%
             edge_color_digits = 2,
             edge_size_digits = 2,
             #aspect_ratio = 1.618,
-            output_file = file.path('demulticoder/figures', '/supp_figure_2_whole_community.pdf'))
+            output_file = file.path('standard_workflow/combined_figures', '/supp_figure_2_whole_community.pdf'))
 ```
 
 ```{r session info}
