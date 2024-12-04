@@ -46,8 +46,6 @@ set.seed(seed)
 
 ### Let's also load files from the standard worfklows for its and dataset rps10 datasets, and combine. We'll then make a combined matrix that is analogous to what was done with the demulticoder analysis
 ```{r load files standard workflow its}
-
-
 taxa_its<- read.table("standard_workflow/its/data/its_taxa.out", sep="\t", stringsAsFactors=F,header=T)
 
 taxa_filt_its <- taxa_its %>%
