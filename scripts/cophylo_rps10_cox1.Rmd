@@ -1,0 +1,34 @@
+---
+title: "Cophylo analysis"
+output: html_document
+date: "2024-12-10"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ape)
+#library(phyloch)
+library(phytools)
+library(phangorn)
+library(ggtree)
+library(ggplot2)
+library(grid)
+library(markdown)
+library(RColorBrewer)
+library(fuzzyjoin)
+library(stringr)
+
+knitr::opts_knit$set(root.dir = "~/benchmark_demulticoder")
+seed <- 1
+set.seed(seed)
+```
+
+
+```{r, read in trees}
+cox1<-ape::read.tree("rps10_cox1_phylogeny/cox1_db_mafft_auto.fasta.treefile")
+rps10<-read.tree("rps10_cox1_phylogeny/rps10_db_mafft_auto_ugene.fasta.treefile")
+datasettable <- read.table("rps10_cox1_phylogeny/phyloinfo_cox1rps10.txt", sep = "\t", header=T, stringsAsFactors = F, quote = "")
+```
+
+
+
