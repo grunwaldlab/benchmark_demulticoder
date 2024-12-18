@@ -24,10 +24,10 @@ set.seed(seed)
 
 ### Read in the data
 ```{r, read in trees}
-cox1<-ape::read.tree("rps10_cox1_phylogeny/data/cox1_db_mafft_unique_gp1000.fasta.treefile")
-#cox1<-midpoint(cox1)
+cox1<-ape::read.tree("rps10_cox1_phylogeny/data/cox1_mafft2_aligned_auto_ugenetrim.fasta.treefile")
+cox1<-midpoint(cox1)
 rps10<-read.tree("rps10_cox1_phylogeny/data/rps10_mafft2_aligned_auto_ugenetrim.fasta.treefile")
-#rps10<-midpoint(rps10)
+rps10<-midpoint(rps10)
 
 datasettable <- read.table("rps10_cox1_phylogeny/data/phyloinfo_cox1rps10.txt", sep = "\t", header=T, stringsAsFactors = F, quote = "")
 
@@ -96,9 +96,6 @@ color_tips <- function(tree, dataset, genus_colors) {
 cox1_tip_colors <- color_tips(cox1, datasettable, genus_colors)
 rps10_tip_colors <- color_tips(rps10, datasettable, genus_colors)
 
-
-#cox1<-midpoint(cox1)
-#rps10<-midpoint(rps10)
 # Debugging: Print out the mappings to check for correctness
 print("cox1 tip labels and colors:")
 print(data.frame(tip.label = cox1$tip.label, color = cox1_tip_colors))
@@ -120,11 +117,14 @@ obj <- phytools::cophylo(multi2di(cox1), multi2di(rps10), assoc=assoctable, rota
 # Plot the cophylogeny
 pdf("rps10_cox1_phylogeny/figures/figure_cox_vs_rps10_unique_auto_rotatemultitrue_midpoint_black.pdf", width = 8.5, height = 11, useDingbats = FALSE)
 plot(obj, tip.len = 0.01, fsize = 0.20, scale.bar = c(0.2, 0.2), pts = FALSE, link.type="curved", link.lwd=1, link.lty="solid", link.col=make.transparent("black", 0.4))
-title(main = "Cophylogeny", line = -1)
+#title(main = "Cophylogeny", line = -1)
 
 # Add tip labels with colors
 tiplabels.cophylo(pch = 21, bg = cox1_tip_colors, cex = 0.4, which = "left")
 tiplabels.cophylo(pch = 21, bg = rps10_tip_colors, cex = 0.4, which = "right")
 
 dev.off()
+```
+```{r session info}
+sessioninfo::session_info()
 ```

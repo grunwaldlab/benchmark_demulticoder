@@ -1,0 +1,5 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+mothur_16S_sop/data/*.fastq.gz
