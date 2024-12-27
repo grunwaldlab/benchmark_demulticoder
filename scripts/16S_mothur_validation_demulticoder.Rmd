@@ -1,20 +1,21 @@
 ---
-title: "16S Mothur SOP Validation"
-output: 
-  rmarkdown::html_vignette:
-    fig_path: "man/figures"
-vignette: >
-  %\VignetteIndexEntry{16S Mothur SOP Validation}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
+title: "Demulticoder 16S Mothur SOP Validation"
+output: html_document
+date: "2024-12-24"
 ---
 
-```{r, include = FALSE}
-knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>",
-  fig.path = "./"
-)
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(phyloseq); packageVersion("phyloseq")
+library(Biostrings); packageVersion("Biostrings")
+library(ggplot2); packageVersion("ggplot2")
+library(dada2); packageVersion("dada2")
+devtools::install_github("grunwaldlab/demulticoder", force=TRUE)
+library("demulticoder"); packageVersion("dada2")
+
+seed <- 1
+set.seed(seed)
 ```
 
 ## Demonstration of how to use demulticoder on a dataset that is actually three separate datasets (RPS10, ITS, and 16S) at once
@@ -73,17 +74,11 @@ primer_info <- data.frame(
 knitr::kable(primer_info, row.names = FALSE)
 ```
 
-```{r setup, include=FALSE}
-#TODO-at some point switch to loading github repo version
-devtools::install_github("grunwaldlab/demulticoder", force=TRUE)
-library("demulticoder")
-```
-
 ### Step 1-Remove N's and create directory structure for downstream steps
 ```{r prepare reads, fig.height=6, fig.width=6}
 outputs<-prepare_reads(
-  data_directory = "~/demulticoder_benchmarking/mothur_16S_sop/data", 
-  output_directory = "~/demulticoder_benchmarking/mothur_16S_sop/data",
+  data_directory = "~/benchmark_demulticoder/mothur_16S_sop/data", 
+  output_directory = "~/benchmark_demulticoder/mothur_16S_sop/outputs_demulticoder",
   overwrite_existing = FALSE)
 ```
 
@@ -91,7 +86,7 @@ outputs<-prepare_reads(
 ```{r Remove primers and trim reads, fig.height=6, fig.width=6}
 cut_trim(
   outputs,
-  cutadapt_path="/usr/bin/cutadapt",
+  cutadapt_path="/opt/homebrew/bin/cutadapt",
   overwrite_existing = TRUE)
 ```
 
@@ -107,7 +102,7 @@ make_asv_abund_matrix(
 assign_tax(
   outputs,
   asv_abund_matrix,
-  db_16S="silva_nr99_v138.1_wSpecies_train_set.fa",
+  db_16S="silva_nr99_v138.2_toSpecies_trainset.fa.gz",
   retrieve_files=TRUE,
   overwrite_existing=TRUE)
 ```
@@ -120,7 +115,8 @@ objs<-convert_asv_matrix_to_objs(outputs, save_outputs=TRUE, overwrite_existing 
 ### Step 6-evaluate accuracy using mock community, as shown in dada2 tutorial
 ```{r examine accuracy, fig.height=6, fig.width=6}
 library(Biostrings); packageVersion("Biostrings")
-tax_matrix<-read.csv("~/demulticoder_benchmarking/mothur_16S_sop/outputs/final_asv_abundance_matrix_r16S.csv")
+
+tax_matrix<-read.csv("~/benchmark_demulticoder/mothur_16S_sop/outputs_demulticoder/final_asv_abundance_matrix_r16S.csv")
 
 unqs.mock <- tax_matrix[, c(2, which(colnames(tax_matrix) == "Mock_r16S"))]
 
@@ -128,7 +124,7 @@ unqs.mock <- unqs.mock[unqs.mock$Mock_r16S != 0,]
 
 cat("DADA2 inferred", nrow(unqs.mock), "sample sequences present in the Mock community.\n")
 
-mock.ref <- dada2::getSequences(file.path("~/demulticoder_benchmarking/mothur_16S_sop/data", "HMP_MOCK.v35.fasta"))
+mock.ref <- dada2::getSequences(file.path("mothur_16S_sop/data", "HMP_MOCK.v35.fasta"))
 match.ref <- sum(sapply(unqs.mock$sequence, function(x) any(grepl(x, mock.ref))))
 cat("Of those,", sum(match.ref), "were exact matches to the expected reference sequences.\n")
 ```

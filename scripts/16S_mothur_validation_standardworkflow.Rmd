@@ -1,0 +1,182 @@
+---
+title: "Demulticoder 16S Mothur SOP standard workflow"
+output: html_document
+date: "2024-12-24"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(phyloseq); packageVersion("phyloseq")
+library(Biostrings); packageVersion("Biostrings")
+library(ggplot2); packageVersion("ggplot2")
+library(dada2); packageVersion("dada2")
+
+knitr::opts_knit$set(root.dir = "~/benchmark_demulticoder/mothur_16S_sop")
+seed <- 1
+set.seed(seed)
+```
+### This script outlines the key steps in the 16S Mothur SOP standard workflow as outlined here: https://benjjneb.github.io/dada2/tutorial.html
+
+### Getting ready
+```{r inputs, echo=FALSE}
+path <- "data" 
+list.files(path)
+
+# Forward and reverse fastq filenames have format: SAMPLENAME_R1_001.fastq and SAMPLENAME_R2_001.fastq
+fnFs <- sort(list.files(path, pattern="_R1.fastq.gz", full.names = TRUE))
+fnRs <- sort(list.files(path, pattern="_R2.fastq.gz", full.names = TRUE))
+# Extract sample names, assuming filenames have format: SAMPLENAME_XXX.fastq
+sample.names <- sapply(strsplit(basename(fnFs), "_"), `[`, 1)
+```
+
+### Inspect read quality profiles
+```{r read qual profile, echo=FALSE}
+plotQualityProfile(fnFs[1:2])
+plotQualityProfile(fnRs[1:2])
+```
+
+### Filter and trim
+```{r filter and trim, echo=FALSE}
+# Place filtered files in filtered/ subdirectory
+filtFs <- file.path(path, "filtered_standardwf", paste0(sample.names, "_F_filt.fastq.gz"))
+filtRs <- file.path(path, "filtered_standardwf", paste0(sample.names, "_R_filt.fastq.gz"))
+names(filtFs) <- sample.names
+names(filtRs) <- sample.names
+
+out <- filterAndTrim(fnFs, filtFs, fnRs, filtRs, truncLen=c(240,160),
+              maxN=0, maxEE=c(2,2), truncQ=2, rm.phix=TRUE,
+              compress=TRUE, multithread=TRUE) # On Windows set multithread=FALSE
+head(out)
+```
+
+### Learn Error rates
+```{r learn error rates, echo=FALSE}
+errF <- learnErrors(filtFs, multithread=TRUE)
+errR <- learnErrors(filtRs, multithread=TRUE)
+plotErrors(errF, nominalQ=TRUE)
+```
+
+### Sample inference
+```{r sample inference, echo=FALSE}
+dadaFs <- dada(filtFs, err=errF, multithread=TRUE)
+dadaRs <- dada(filtRs, err=errR, multithread=TRUE)
+dadaFs[[1]]
+dadaRs[[1]]
+```
+
+### Merge paired reads
+```{r sample inference, echo=FALSE}
+mergers <- mergePairs(dadaFs, filtFs, dadaRs, filtRs, verbose=TRUE)
+# Inspect the merger data.frame from the first sample
+head(mergers[[1]])
+```
+
+### Construct sequence table
+```{r sample inference, echo=FALSE}
+seqtab <- makeSequenceTable(mergers)
+dim(seqtab)
+
+table(nchar(getSequences(seqtab)))
+```
+
+
+### Remove chimeras
+```{r sample inference, echo=FALSE}
+seqtab.nochim <- removeBimeraDenovo(seqtab, method="consensus", multithread=TRUE, verbose=TRUE)
+dim(seqtab.nochim)
+
+sum(seqtab.nochim)/sum(seqtab)
+```
+
+### Track reads through pipeline
+```{r sample inference, echo=FALSE}
+getN <- function(x) sum(getUniques(x))
+track <- cbind(out, sapply(dadaFs, getN), sapply(dadaRs, getN), sapply(mergers, getN), rowSums(seqtab.nochim))
+# If processing a single sample, remove the sapply calls: e.g. replace sapply(dadaFs, getN) with getN(dadaFs)
+colnames(track) <- c("input", "filtered", "denoisedF", "denoisedR", "merged", "nonchim")
+rownames(track) <- sample.names
+head(track)
+
+taxa.print <- track  # Removing sequence rownames for display only
+rownames(taxa.print) <- NULL
+
+write.table(track, file="outputs_standardworkflow/track_reads_r16S_standardwf",sep="\t",quote=F)
+```
+
+### Assign Taxonomy
+```{r sample inference, echo=FALSE}
+taxa <- assignTaxonomy(seqtab.nochim, "data/silva_nr99_v138.2_toGenus_trainset.fa.gz", multithread=TRUE)
+taxa <- addSpecies(taxa, "data/silva_v138.2_assignSpecies.fa.gz")
+
+taxa.print <- taxa # Removing sequence rownames for display only
+rownames(taxa.print) <- NULL
+head(taxa.print)
+```
+
+### Evaluate accuracy
+```{r evaluate accuracy, echo=FALSE}
+unqs.mock <- seqtab.nochim["Mock",]
+unqs.mock <- sort(unqs.mock[unqs.mock>0], decreasing=TRUE) # Drop ASVs absent in the Mock
+cat("DADA2 inferred", length(unqs.mock), "sample sequences present in the Mock community.\n")
+
+mock.ref <- getSequences(file.path(path, "HMP_MOCK.v35.fasta"))
+match.ref <- sum(sapply(names(unqs.mock), function(x) any(grepl(x, mock.ref))))
+cat("Of those,", sum(match.ref), "were exact matches to the expected reference sequences.\n")
+```
+
+### Hand off to phyloseq
+```{r handoff to phyloeq, echo=FALSE}
+samples.out <- rownames(seqtab.nochim)
+subject <- sapply(strsplit(samples.out, "D"), `[`, 1)
+gender <- substr(subject,1,1)
+subject <- substr(subject,2,999)
+day <- as.integer(sapply(strsplit(samples.out, "D"), `[`, 2))
+samdf <- data.frame(Subject=subject, Gender=gender, Day=day)
+samdf$When <- "Early"
+samdf$When[samdf$Day>100] <- "Late"
+rownames(samdf) <- samples.out
+
+ps <- phyloseq(otu_table(seqtab.nochim, taxa_are_rows=FALSE), 
+               sample_data(samdf), 
+               tax_table(taxa))
+ps <- prune_samples(sample_names(ps) != "Mock", ps) # Remove mock sample
+
+dna <- Biostrings::DNAStringSet(taxa_names(ps))
+names(dna) <- taxa_names(ps)
+ps <- merge_phyloseq(ps, dna)
+taxa_names(ps) <- paste0("ASV", seq(ntaxa(ps)))
+ps
+```
+
+### Visualize alpha diversity
+```{r, alpha diversity}
+plot_richness(ps, x="Day", measures=c("Shannon", "Simpson"), color="When")
+```
+
+### Visualize alpha diversity-ordination
+```{r, alpha diversity}
+# Transform data to proportions as appropriate for Bray-Curtis distances
+ps.prop <- transform_sample_counts(ps, function(otu) otu/sum(otu))
+ord.nmds.bray <- ordinate(ps.prop, method="NMDS", distance="bray")
+```
+
+### Visualize alpha diversity-ordination
+```{r, alpha diversity}
+# Transform data to proportions as appropriate for Bray-Curtis distances
+ps.prop <- transform_sample_counts(ps, function(otu) otu/sum(otu))
+ord.nmds.bray <- ordinate(ps.prop, method="NMDS", distance="bray")
+plot_ordination(ps.prop, ord.nmds.bray, color="When", title="Bray NMDS")
+```
+
+### Top 20 taxa in early and late samples
+```{r, top 20 taxa}
+top20 <- names(sort(taxa_sums(ps), decreasing=TRUE))[1:20]
+ps.top20 <- transform_sample_counts(ps, function(OTU) OTU/sum(OTU))
+ps.top20 <- prune_taxa(top20, ps.top20)
+plot_bar(ps.top20, x="Day", fill="Family") + facet_wrap(~When, scales="free_x")
+```
+
+```{r, session info}
+sessioninfo::session_info()
+```
