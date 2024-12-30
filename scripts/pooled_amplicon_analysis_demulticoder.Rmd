@@ -304,7 +304,7 @@ write_csv(metadata, file.path('demulticoder/data', 'metadata_with_infection_data
 ```
 
 ### For the sample data, I will add columns for the proportion of reads in each sample representing each inoculum as well as a columns that indicate whether the expected inoculum was found, and if so, if it was the only inoculum found.
-```{r}
+```{r prep metadata}
 # Get per-sample proportions of reads
 species_name_key <- c(Phytophthora_cinnamomi = "cin_prop", Phytophthora_plurivora = "plu_prop", Pythium_cryptoirregulare = "cry_prop")
 sample_infection_data <- infection_data %>%
@@ -377,7 +377,7 @@ write_csv(metadata, file.path('demulticoder/data', 'metadata_with_infection_data
 ```
 
 ### Let's convert our new matrix and associated metadata table to a taxmap object
-```{r}
+```{r convert to taxmap obj}
 metadata <- filter(metadata, ! is_ambiguous)
 abundance <- filter(abundance, ! is_inoculum)
 
