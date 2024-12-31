@@ -875,7 +875,7 @@ obj_subset %>%
             output_file = file.path('demulticoder/figures', '/heattree_mostabund_taxa.pdf'))
 ```
 
-### Reload ASV matrices and metadata for final checks when 
+### Reload ASV matrices and metadata for final checks when examining new db to the old version before updates
 ```{r load reads}
 seed <- 1
 set.seed(seed)
@@ -1060,7 +1060,7 @@ set.seed(10)
 
 obj_olddb %>%
   filter_taxa(! is_stem) %>%
-  filter_taxa(n_samples >= 5, supertaxa = TRUE, reassign_obs = FALSE) %>%
+  filter_taxa(n_samples >= 3, supertaxa = TRUE, reassign_obs = FALSE) %>%
   filter_taxa(! grepl(x = taxon_names, "_sp$"), reassign_obs = FALSE) %>%
   filter_taxa(! grepl(x = taxon_names, "incertae_sedis", ignore.case = TRUE), reassign_obs = FALSE) %>%
   remove_redundant_names() %>%
@@ -1091,16 +1091,16 @@ Let's facet the two plots so we have a side-by-side comparison of the two databa
 old_db <- image_read_pdf("demulticoder/figures/heattree_mostabund_taxa_rps10_olddb.pdf")
 new_db <- image_read_pdf("demulticoder/figures/heattree_mostabund_taxa_rps10_newdb.pdf")
 
-max_width <- max(image_info(old_db)$width, image_info(new_db)$width)
-max_height <- max(image_info(old_db)$height, image_info(new_db)$height)
+#max_width <- max(image_info(old_db)$width, image_info(new_db)$width)
+#max_height <- max(image_info(old_db)$height, image_info(new_db)$height)
 
-old_db_resized <- image_resize(old_db, paste0(max_width, "x", max_height, "!"))
-new_db_resized <- image_resize(new_db, paste0(max_width, "x", max_height, "!"))
+#old_db_resized <- image_resize(old_db, paste0(max_width, "x", max_height, "!"))
+#new_db_resized <- image_resize(new_db, paste0(max_width, "x", max_height, "!"))
 
-old_grob <- rasterGrob(as.raster(old_db_resized))
-new_grob <- rasterGrob(as.raster(new_db_resized))
+old_grob <- rasterGrob(as.raster(old_db))
+new_grob <- rasterGrob(as.raster(new_db))
 
-pdf("demulticoder/figures/combined_heat_trees_db_compare.pdf", width=12, height=8)
+pdf("demulticoder/figures/combined_heat_trees_db_compare.pdf", width=8, height=6)
 grid.newpage()
 pushViewport(viewport(layout = grid.layout(2, 2, 
                                            heights = unit(c(0.1, 1), "null"),
