@@ -28,7 +28,7 @@ library(magick); packageVersion("magick")
 library(vegan); packageVersion("vegan")
 library(pdftools);packageVersion("pdftools")
 library(vegan); packageVersion("vegan")
-library(grid)
+library(grid); packageVersion("grid")
 library(gridExtra)
 knitr::opts_knit$set(root.dir = "~/benchmark_demulticoder")
 ```
@@ -146,11 +146,11 @@ max_boot <- setNames(max_boot$max, max_boot$taxon_id)
 obj_newdb$data$tax_data$max_boot <- max_boot[match(obj_newdb$data$tax_data$taxon_id, names(max_boot))]
 
 
-set.seed(1)
+set.seed(10)
 
 obj_newdb %>%
   filter_taxa(! is_stem) %>%
-  filter_taxa(n_samples >= 10, supertaxa = TRUE, reassign_obs = FALSE) %>%
+  filter_taxa(n_samples >= 3, supertaxa = TRUE, reassign_obs = FALSE) %>%
   filter_taxa(! grepl(x = taxon_names, "_sp$"), reassign_obs = FALSE) %>%
   filter_taxa(! grepl(x = taxon_names, "incertae_sedis", ignore.case = TRUE), reassign_obs = FALSE) %>%
   remove_redundant_names() %>%
@@ -159,11 +159,11 @@ obj_newdb %>%
             node_color = ifelse(is.na(max_boot), 0, max_boot),
             node_color_range = c("#D2042D","#fc8d62","#a6d854","#66c2a5","#8da0cb","gray"),
             node_label = taxon_names,
-            node_size_range = c(0.008, 0.025),
-            node_label_size_range = c(0.012, 0.018),
-            edge_label_size_range = c(0.010, 0.013),
+            node_size_range = c(0.01, 0.03), 
+            node_label_size_range = c(0.014, 0.02),
+            edge_label_size_range = c(0.012, 0.015), 
             node_size_interval = c(0, 1),
-            edge_size_range = c(0.001, 0.008),
+            edge_size_range = c(0.002, 0.01), 
             layout = "da", initial_layout = "re",
             node_color_axis_label = "Bootstrap support",
             node_size_axis_label = "Mean proportion of reads",
@@ -172,7 +172,7 @@ obj_newdb %>%
             node_size_digits = 2,
             edge_color_digits = 2,
             edge_size_digits = 2,
-            aspect_ratio = 1.618,
+            #aspect_ratio = 1.618,
             output_file = file.path('demulticoder/figures', '/heattree_mostabund_taxa_rps10_newdb.pdf'))
 ```
 
@@ -213,11 +213,11 @@ max_boot <- setNames(max_boot$max, max_boot$taxon_id)
 obj_olddb$data$tax_data$max_boot <- max_boot[match(obj_olddb$data$tax_data$taxon_id, names(max_boot))]
 
 
-set.seed(1)
+set.seed(10)
 
 obj_olddb %>%
   filter_taxa(! is_stem) %>%
-  filter_taxa(n_samples >= 10, supertaxa = TRUE, reassign_obs = FALSE) %>%
+  filter_taxa(n_samples >= 5, supertaxa = TRUE, reassign_obs = FALSE) %>%
   filter_taxa(! grepl(x = taxon_names, "_sp$"), reassign_obs = FALSE) %>%
   filter_taxa(! grepl(x = taxon_names, "incertae_sedis", ignore.case = TRUE), reassign_obs = FALSE) %>%
   remove_redundant_names() %>%
@@ -226,11 +226,11 @@ obj_olddb %>%
             node_color = ifelse(is.na(max_boot), 0, max_boot),
             node_color_range = c("#D2042D","#fc8d62","#a6d854","#66c2a5","#8da0cb","gray"),
             node_label = taxon_names,
-            node_size_range = c(0.008, 0.025),
-            node_label_size_range = c(0.012, 0.018),
-            edge_label_size_range = c(0.010, 0.013),
+            node_size_range = c(0.01, 0.03), 
+            node_label_size_range = c(0.014, 0.02),
+            edge_label_size_range = c(0.012, 0.015), 
             node_size_interval = c(0, 1),
-            edge_size_range = c(0.001, 0.008),
+            edge_size_range = c(0.002, 0.01), 
             layout = "da", initial_layout = "re",
             node_color_axis_label = "Bootstrap support",
             node_size_axis_label = "Mean proportion of reads",
@@ -239,28 +239,30 @@ obj_olddb %>%
             node_size_digits = 2,
             edge_color_digits = 2,
             edge_size_digits = 2,
-            aspect_ratio = 1.618,
+            #aspect_ratio = 1.618,
             output_file = file.path('demulticoder/figures', '/heattree_mostabund_taxa_rps10_olddb.pdf'))
 ```
 
 Let's facet the two plots so we have a side-by-side comparison of the two databases. 
 ```{r, facet community plot,fig.height=30, fig.width=30, message=FALSE, echo=FALSE}
-# Read the images
-old_db <- magick::image_read_pdf("demulticoder/figures/heattree_mostabund_taxa_rps10_olddb.pdf")
-new_db <- magick::image_read_pdf("demulticoder/figures/heattree_mostabund_taxa_rps10_newdb.pdf")
+old_db <- image_read_pdf("demulticoder/figures/heattree_mostabund_taxa_rps10_olddb.pdf")
+new_db <- image_read_pdf("demulticoder/figures/heattree_mostabund_taxa_rps10_newdb.pdf")
 
-# Convert to grobs
-old_grob <- grid::rasterGrob(as.raster(old_db))
-new_grob <- grid::rasterGrob(as.raster(new_db))
+max_width <- max(image_info(old_db)$width, image_info(new_db)$width)
+max_height <- max(image_info(old_db)$height, image_info(new_db)$height)
 
-# Create a layout with larger bottom plots
-pdf("demulticoder/figures/combined_heat_trees_db_compare.pdf", width=10, height=12)
+old_db_resized <- image_resize(old_db, paste0(max_width, "x", max_height, "!"))
+new_db_resized <- image_resize(new_db, paste0(max_width, "x", max_height, "!"))
+
+old_grob <- rasterGrob(as.raster(old_db_resized))
+new_grob <- rasterGrob(as.raster(new_db_resized))
+
+pdf("demulticoder/figures/combined_heat_trees_db_compare.pdf", width=12, height=8)
 grid.newpage()
-pushViewport(viewport(layout = grid.layout(3, 2, 
-                                           heights = unit(c(0.1, 1, 1.5), "null"),
+pushViewport(viewport(layout = grid.layout(2, 2, 
+                                           heights = unit(c(0.1, 1), "null"),
                                            widths = unit(c(1, 1), "null"))))
 
-# Function to place grobs with labels
 place_grob <- function(grob, row, col, label) {
   pushViewport(viewport(layout.pos.row = row, layout.pos.col = col))
   grid.text(label, y = unit(1, "npc") + unit(0.5, "lines"), 
@@ -270,44 +272,45 @@ place_grob <- function(grob, row, col, label) {
   upViewport(2)
 }
 
-# Place grobs with labels
-place_grob(old_grob, 2, 1, "A. Old database")
-place_grob(new_grob, 2, 2, "B. New database")
+place_grob(old_grob, 2, 1, "A. Original oomyceteDB database")
+place_grob(new_grob, 2, 2, "B. Updated oomyceteDB database")
 
 dev.off()
 ```
 
 ### Summary stats comparing db
 ```{r, summary stats, message=FALSE, echo=FALSE}
-# Load necessary libraries
-library(dplyr)
-
-# Load your old and new database matrices
-old_db <- read.csv("path_to_old_db.csv", sep = "\t")
-new_db <- read.csv("path_to_new_db.csv", sep = "\t")
-
 # Extract the taxonomic assignments and bootstrap support values
-old_taxa <- old_db %>% select(asv_id, dada2_tax)
-new_taxa <- new_db %>% select(asv_id, dada2_tax)
+new_taxa <- asv_matrix_rps10 %>% select(sequence, dada2_tax)
+old_taxa <- asv_matrix_rps10_oldb %>% select(sequence, dada2_tax)
 
-# Merge the old and new taxonomic assignments on asv_id
-merged_taxa <- merge(old_taxa, new_taxa, by = "asv_id", suffixes = c("_old", "_new"))
+# Merge the old and new taxonomic assignments on sequence
+merged_taxa <- merge(old_taxa, new_taxa, by = "sequence", suffixes = c("_old", "_new"))
 
-# Calculate the number of taxa with high bootstrap support in the old and new databases
-high_support_old <- sum(old_db[, 4:ncol(old_db)] >= 80, na.rm = TRUE)
-high_support_new <- sum(new_db[, 4:ncol(new_db)] >= 80, na.rm = TRUE)
+# Function to extract bootstrap values from the taxonomic string
+extract_bootstrap <- function(tax_string) {
+  values <- unlist(strsplit(tax_string, ";"))
+  numeric_values <- sapply(values, function(x) {
+    parts <- unlist(strsplit(x, "--"))
+    if (length(parts) >= 2) {
+      return(as.numeric(parts[2]))
+    } else {
+      return(NA)
+    }
+  })
+  return(paste(numeric_values, collapse = ";"))
+}
 
-# Calculate the number of newly assigned taxa in the new database
-newly_assigned_taxa <- nrow(merged_taxa %>% filter(dada2_tax_old != dada2_tax_new))
+# Apply the function to extract bootstrap values for old and new taxonomies
+merged_taxa$dada2_tax_old_boot <- sapply(merged_taxa$dada2_tax_old, extract_bootstrap)
+merged_taxa$dada2_tax_new_boot <- sapply(merged_taxa$dada2_tax_new, extract_bootstrap)
 
-# Calculate the number of taxa present in both databases but with different bootstrap support values
-changed_support_taxa <- nrow(merged_taxa %>% filter(dada2_tax_old == dada2_tax_new & 
-                                                    rowSums(old_db[, 4:ncol(old_db)], na.rm = TRUE) != 
-                                                    rowSums(new_db[, 4:ncol(new_db)], na.rm = TRUE)))
+# Create a new dataframe with rows where dada2_tax_old and dada2_tax_new don't match
+mismatched_taxa <- merged_taxa %>% filter(dada2_tax_old != dada2_tax_new)
 
-# Print summary statistics
-cat("Number of taxa with high bootstrap support in the old database:", high_support_old, "\n")
-cat("Number of taxa with high bootstrap support in the new database:", high_support_new, "\n")
-cat("Number of newly assigned taxa in the new database:", newly_assigned_taxa, "\n")
-cat("Number of taxa present in both databases but with different bootstrap support values:", changed_support_taxa, "\n")
+# Print the mismatched taxa dataframe
+print(mismatched_taxa)
+
+# Write the merged dataframe to a CSV file
+write.csv(merged_taxa, "demulticoder/results/taxdifferences_oldnewdb.csv")
 ```
