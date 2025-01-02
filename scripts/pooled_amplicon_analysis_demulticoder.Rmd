@@ -876,10 +876,7 @@ obj_subset %>%
 ```
 
 ### Reload ASV matrices and metadata for final checks when examining new db to the old version before updates
-```{r load reads}
-seed <- 1
-set.seed(seed)
-
+```{r load reads-compare old and new db}
 asv_matrix_rps10<-read.csv("demulticoder/data/final_asv_abundance_matrix_rps10.csv")
 asv_matrix_rps10$dada2_tax <- asv_matrix_rps10$dada2_tax <- gsub("Stramenopila", "Eukaryota--100--Domain;Stramenopila", asv_matrix_rps10$dada2_tax)
 asv_matrix_rps10 <- asv_matrix_rps10[, -1]
@@ -925,7 +922,7 @@ obj_newdb$data$prop
 ```
 
 ### Convert ASV matrices to taxmap objects-old db
-```{r convert to taxmap obj}
+```{r convert to taxmap obj-compare old and new db}
 obj_olddb <- parse_tax_data(asv_matrix_rps10_oldb, class_cols = 'dada2_tax', class_sep = ';',
                       class_regex = '^(.+)--(.+)--(.+)$',
                       class_key = c(taxon = 'taxon_name', boot = 'info', rank = 'taxon_rank'))
@@ -988,19 +985,18 @@ max_boot <- setNames(max_boot$max, max_boot$taxon_id)
 # Add maximum bootstrap support to tax_data
 obj_newdb$data$tax_data$max_boot <- max_boot[match(obj_newdb$data$tax_data$taxon_id, names(max_boot))]
 
-
 set.seed(10)
 
 obj_newdb %>%
   filter_taxa(! is_stem) %>%
-  filter_taxa(n_samples >= 3, supertaxa = TRUE, reassign_obs = FALSE) %>%
+  filter_taxa(n_samples >= 1, supertaxa = TRUE, reassign_obs = FALSE) %>%
   filter_taxa(! grepl(x = taxon_names, "_sp$"), reassign_obs = FALSE) %>%
   filter_taxa(! grepl(x = taxon_names, "incertae_sedis", ignore.case = TRUE), reassign_obs = FALSE) %>%
   remove_redundant_names() %>%
   heat_tree(node_size = mean_prop,
             edge_size = n_samples,
             node_color = ifelse(is.na(max_boot), 0, max_boot),
-            node_color_range = c("#D2042D","#fc8d62","#a6d854","#66c2a5","#8da0cb","gray"),
+            node_color_range = c("#D2042D","#fc8d62","#a6d854","#66c2a5","lightblue","#b8c0cf"),
             node_label = taxon_names,
             node_size_range = c(0.01, 0.03), 
             node_label_size_range = c(0.014, 0.02),
@@ -1016,7 +1012,7 @@ obj_newdb %>%
             edge_color_digits = 2,
             edge_size_digits = 2,
             #aspect_ratio = 1.618,
-            output_file = file.path('demulticoder/figures', '/heattree_mostabund_taxa_rps10_newdb.pdf'))
+            output_file = file.path('demulticoder/figures', '/heattree_mostabund_taxa_rps10_newdb_boot60_greater1.pdf'))
 ```
 
 ### Community composition plot-old db-showcase differences in bootstrap support values
@@ -1060,14 +1056,14 @@ set.seed(10)
 
 obj_olddb %>%
   filter_taxa(! is_stem) %>%
-  filter_taxa(n_samples >= 3, supertaxa = TRUE, reassign_obs = FALSE) %>%
+  filter_taxa(n_samples >= 1, supertaxa = TRUE, reassign_obs = FALSE) %>%
   filter_taxa(! grepl(x = taxon_names, "_sp$"), reassign_obs = FALSE) %>%
   filter_taxa(! grepl(x = taxon_names, "incertae_sedis", ignore.case = TRUE), reassign_obs = FALSE) %>%
   remove_redundant_names() %>%
   heat_tree(node_size = mean_prop,
             edge_size = n_samples,
             node_color = ifelse(is.na(max_boot), 0, max_boot),
-            node_color_range = c("#D2042D","#fc8d62","#a6d854","#66c2a5","#8da0cb","gray"),
+            node_color_range = c("#D2042D","#fc8d62","#a6d854","#66c2a5","lightblue","#b8c0cf"),
             node_label = taxon_names,
             node_size_range = c(0.01, 0.03), 
             node_label_size_range = c(0.014, 0.02),
@@ -1083,24 +1079,24 @@ obj_olddb %>%
             edge_color_digits = 2,
             edge_size_digits = 2,
             #aspect_ratio = 1.618,
-            output_file = file.path('demulticoder/figures', '/heattree_mostabund_taxa_rps10_olddb.pdf'))
+            output_file = file.path('demulticoder/figures', '/heattree_mostabund_taxa_rps10_olddb_boot60_greater1.pdf'))
 ```
 
 Let's facet the two plots so we have a side-by-side comparison of the two databases. 
 ```{r, facet community plot,fig.height=30, fig.width=30, message=FALSE, echo=FALSE}
-old_db <- image_read_pdf("demulticoder/figures/heattree_mostabund_taxa_rps10_olddb.pdf")
-new_db <- image_read_pdf("demulticoder/figures/heattree_mostabund_taxa_rps10_newdb.pdf")
+old_db <- image_read_pdf("demulticoder/figures/heattree_mostabund_taxa_rps10_olddb_boot60_greater1.pdf")
+new_db <- image_read_pdf("demulticoder/figures/heattree_mostabund_taxa_rps10_newdb_boot60_greater1.pdf")
 
-#max_width <- max(image_info(old_db)$width, image_info(new_db)$width)
-#max_height <- max(image_info(old_db)$height, image_info(new_db)$height)
+max_width <- max(image_info(old_db)$width, image_info(new_db)$width)
+max_height <- max(image_info(old_db)$height, image_info(new_db)$height)
 
-#old_db_resized <- image_resize(old_db, paste0(max_width, "x", max_height, "!"))
-#new_db_resized <- image_resize(new_db, paste0(max_width, "x", max_height, "!"))
+old_db_resized <- image_resize(old_db, paste0(max_width, "x", max_height, "!"))
+new_db_resized <- image_resize(new_db, paste0(max_width, "x", max_height, "!"))
 
 old_grob <- rasterGrob(as.raster(old_db))
 new_grob <- rasterGrob(as.raster(new_db))
 
-pdf("demulticoder/figures/combined_heat_trees_db_compare.pdf", width=8, height=6)
+pdf("demulticoder/figures/combined_heat_trees_db_compare_boot60_greater1.pdf", width=8, height=6)
 grid.newpage()
 pushViewport(viewport(layout = grid.layout(2, 2, 
                                            heights = unit(c(0.1, 1), "null"),
