@@ -3,3 +3,9 @@
 .RData
 .Ruserdata
 mothur_16S_sop/data/*.fastq.gz
+mothur_16S_sop/data/silva*
+mothur_16S_sop/temp
+mothur_16S_sop/data/filtered*
+mothur_16S_sop/outputs_demulticoder
+mothur_16S_sop/outputs_standardworkflow
+mothur_16S_sop/data/prefiltered*

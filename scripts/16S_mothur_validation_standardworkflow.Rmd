@@ -30,6 +30,19 @@ fnRs <- sort(list.files(path, pattern="_R2.fastq.gz", full.names = TRUE))
 sample.names <- sapply(strsplit(basename(fnFs), "_"), `[`, 1)
 ```
 
+### Check read counts if you filter out reads with Ns first-this is a useful comparison when checking read counts relative to demulticoder analyses
+```{r read counts-prefilter, echo=FALSE}
+# Place filtered files in filtered/ subdirectory
+prefiltFs <- file.path(path, "prefiltered_standardwf", paste0(sample.names, "_F_prefilt.fastq.gz"))
+prefiltRs <- file.path(path, "prefiltered_standardwf", paste0(sample.names, "_R_prefilt.fastq.gz"))
+names(prefiltFs) <- sample.names
+names(prefiltRs) <- sample.names
+
+set.seed(2)
+out_prefilt <- filterAndTrim(fnFs, prefiltFs, fnRs, prefiltRs, maxN=0, multithread=TRUE) 
+head(out_prefilt)
+```
+
 ### Inspect read quality profiles
 ```{r read qual profile, echo=FALSE}
 plotQualityProfile(fnFs[1:2])

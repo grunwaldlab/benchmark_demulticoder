@@ -1,7 +1,7 @@
 ---
 title: "Pooled amplicon analysis-demulticoder"
 output: html_document
-date: "2024-05-21"
+date: "2024-12-24"
 ---
 
 ```{r setup}
@@ -952,7 +952,7 @@ obj_olddb$data$prop
 
 ### Community composition plot-new db-showcase differences in bootstrap support values
 ```{r, overall community plot new db}
-min_bootstrap <- 0
+min_bootstrap <- 60
 obj_newdb$data$score$boot <- as.numeric(obj_newdb$data$score$boot)
 max_boot <- obj_newdb$data$score %>%
   group_by(taxon_id) %>%
@@ -1018,7 +1018,7 @@ obj_newdb %>%
 ### Community composition plot-old db-showcase differences in bootstrap support values
 ```{r, overall community plot}
 ### Community composition plot-new db-showcase differences in bootstrap support values
-min_bootstrap <- 0
+min_bootstrap <- 60
 obj_olddb$data$score$boot <- as.numeric(obj_olddb$data$score$boot)
 max_boot <- obj_olddb$data$score %>%
   group_by(taxon_id) %>%

@@ -79,7 +79,7 @@ knitr::kable(primer_info, row.names = FALSE)
 outputs<-prepare_reads(
   data_directory = "~/benchmark_demulticoder/mothur_16S_sop/data", 
   output_directory = "~/benchmark_demulticoder/mothur_16S_sop/outputs_demulticoder",
-  overwrite_existing = FALSE)
+  overwrite_existing = TRUE)
 ```
 
 ### Step 2-Run Cutadapt to remove primers and then trim reads with DADA2 filterAndTrim function 
