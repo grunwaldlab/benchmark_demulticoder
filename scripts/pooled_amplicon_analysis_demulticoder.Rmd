@@ -826,7 +826,7 @@ obj_subset %>%
 ### Let's finally make an exploratory heat tree to look at community composition across all samples, just retaining ASVs present at least 10 times
 
 ### Overall community plot
-```{r, overall community plot}
+```{r, overall community plot 2}
 obj_subset <- obj2 %>%
   filter_taxa(taxon_ranks == "Species", supertaxa = TRUE, reassign_obs = c(tax_abund = FALSE)) 
 min_bootstrap <- 60
@@ -1124,14 +1124,11 @@ dev.off()
 
 ### Summary stats comparing db
 ```{r, summary stats, message=FALSE, echo=FALSE}
-# Extract the taxonomic assignments and bootstrap support values
 new_taxa <- asv_matrix_rps10 %>% select(sequence, dada2_tax)
 old_taxa <- asv_matrix_rps10_oldb %>% select(sequence, dada2_tax)
 
-# Merge the old and new taxonomic assignments on sequence
 merged_taxa <- merge(old_taxa, new_taxa, by = "sequence", suffixes = c("_old", "_new"))
 
-# Function to extract bootstrap values from the taxonomic string
 extract_bootstrap <- function(tax_string) {
   values <- unlist(strsplit(tax_string, ";"))
   numeric_values <- sapply(values, function(x) {
@@ -1145,18 +1142,47 @@ extract_bootstrap <- function(tax_string) {
   return(paste(numeric_values, collapse = ";"))
 }
 
-# Apply the function to extract bootstrap values for old and new taxonomies
 merged_taxa$dada2_tax_old_boot <- sapply(merged_taxa$dada2_tax_old, extract_bootstrap)
 merged_taxa$dada2_tax_new_boot <- sapply(merged_taxa$dada2_tax_new, extract_bootstrap)
 
-# Create a new dataframe with rows where dada2_tax_old and dada2_tax_new don't match
-mismatched_taxa <- merged_taxa %>% filter(dada2_tax_old != dada2_tax_new)
+extract_first_diff <- function(old_boot, new_boot) {
+  old_values <- unlist(strsplit(old_boot, ";"))
+  new_values <- unlist(strsplit(new_boot, ";"))
+  for (i in 1:length(old_values)) {
+    if (old_values[i] != new_values[i]) {
+      return(new_values[i])
+    }
+  }
+  return(NA)
+}
 
-# Print the mismatched taxa dataframe
-print(mismatched_taxa)
+merged_taxa$first_diff_boot_newdb <- mapply(extract_first_diff, merged_taxa$dada2_tax_old_boot, merged_taxa$dada2_tax_new_boot)
+merged_taxa$first_diff_boot_olddb <- mapply(extract_first_diff, merged_taxa$dada2_tax_new_boot, merged_taxa$dada2_tax_old_boot)
 
-# Write the merged dataframe to a CSV file
+merged_taxa$comparison <- mapply(function(x, y) {
+  if (is.na(x) & is.na(y)) {
+    return("equal")
+  } else if (is.na(x) | is.na(y)) {
+    return(NA)
+  } else if (x > y) {
+    return("higher")
+  } else if (x < y) {
+    return("less")
+  } else {
+    return("equal")
+  }
+}, merged_taxa$first_diff_boot_newdb, merged_taxa$first_diff_boot_olddb)
+
+total_comparisons <- sum(!is.na(merged_taxa$comparison))
+prop_higher_newdb <- sum(merged_taxa$comparison == "higher", na.rm = TRUE) / total_comparisons
+prop_less_newdb <- sum(merged_taxa$comparison == "less", na.rm = TRUE) / total_comparisons
+prop_equal_newdb <- sum(merged_taxa$comparison == "equal", na.rm = TRUE) / total_comparisons
+
 write.csv(merged_taxa, "demulticoder/results/taxdifferences_oldnewdb.csv")
+
+cat("Proportion of times new db value is higher than old db value:", prop_higher_newdb, "\n")
+cat("Proportion of times new db value is less than old db value:", prop_less_newdb, "\n")
+cat("Proportion of times new db value is equal to old db value:", prop_equal_newdb, "\n")
 ```
 
 ```{r session info}

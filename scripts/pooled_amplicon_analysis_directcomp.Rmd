@@ -30,9 +30,29 @@ knitr::opts_knit$set(root.dir = "~/benchmark_demulticoder")
 ### Alpha diversity-Let's do a direct comparison of mean inverse Simpson diversity between workflows
 
 ```{r alpha diversity comp}
+# Read in the demulticoder data
+stats_diversity_demulticoder<-read.csv("demulticoder/results/alpha_diversity.csv")
+stats_diversity_sf <- read.csv("standard_workflow/combined_results/alpha_diversity.csv")
 
+stats_diversity_demulticoder <- stats_diversity_demulticoder[order(stats_diversity_demulticoder$sample_name), ]
+stats_diversity_sf <- stats_diversity_sf[order(stats_diversity_sf$sample_name), ]
+
+stats_diversity_sf <- stats_diversity_sf[match(stats_diversity_demulticoder$sample_name, stats_diversity_sf$sample_name), ]
+
+if (!all(stats_diversity_demulticoder$sample_name == stats_diversity_sf$sample_name)) {
+  stop("Sample names do not match between the two data frames.")
+}
+
+raw_count_diff <- stats_diversity_demulticoder$raw_count - stats_diversity_sf$raw_count
+richness_diff <- stats_diversity_demulticoder$richness - stats_diversity_sf$richness
+shannon_diff <- stats_diversity_demulticoder$shannon - stats_diversity_sf$shannon
+invsimpson_diff <- stats_diversity_demulticoder$invsimpson - stats_diversity_sf$invsimpson
+
+#Add to new table
+difference_df <- data.frame(raw_count_diff, richness_diff, shannon_diff, invsimpson_diff)
 ```
 
+### Make summary boxplot showing inverse simpson values
 
 ### Convert ASV matrices to taxmap objects-old db
 ```{r convert to taxmap obj-compare old and new db}
