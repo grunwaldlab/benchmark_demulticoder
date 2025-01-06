@@ -36,8 +36,10 @@ assoctable <- read.table("rps10_cox1_phylogeny/data/assoc_table.txt", sep = "\t"
 ### Make neighbor-joining trees
 ```{r, make trees}
 cox1 <- ape::nj(dist.dna(cox1_aln))
+cox1 <- midpoint(cox1)
 
 rps10 <- ape::nj(dist.dna(rps10_aln))
+rps10 <- midpoint(rps10)
 ```
 
 ###Tip names should already match, but let's check
@@ -122,7 +124,7 @@ obj <- phytools::cophylo(multi2di(cox1), multi2di(rps10), assoc=assoctable, rota
 
 # Plot the cophylogeny
 pdf("rps10_cox1_phylogeny/figures/figure_cox_vs_rps10_unique_auto_nj_black.pdf", width = 8.5, height = 11, useDingbats = FALSE)
-plot(obj, tip.len = 0.01, fsize = 0.20, scale.bar = c(0.2, 0.2), pts = FALSE, link.type="curved", link.lwd=1, link.lty="solid", link.col=make.transparent("black", 0.4))
+plot(obj, tip.len = 0.01, fsize = 0.20, scale.bar = c(0.2, 0.2), pts = FALSE, link.lwd=1, link.lty="solid", link.col=make.transparent("black", 0.4))
 #title(main = "Cophylogeny", line = -1)
 
 # Add tip labels with colors
