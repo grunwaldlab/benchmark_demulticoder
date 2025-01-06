@@ -125,6 +125,7 @@ tiplabels.cophylo(pch = 21, bg = rps10_tip_colors, cex = 0.4, which = "right")
 
 dev.off()
 ```
+
 ```{r session info}
 sessioninfo::session_info()
 ```

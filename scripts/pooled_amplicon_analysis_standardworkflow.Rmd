@@ -676,6 +676,8 @@ ggsave(combined_div_plot, path = "standard_workflow/combined_figures", filename 
 
 ggsave(combined_div_plot, path = "standard_workflow/combined_figures", filename = "diversity.svg", 
        width = 10, height = 6, bg = "#FFFFFF")
+
+write.csv(nmds_data, file.path("standard_workflow", "combined_results/compiled_stats.csv"))
 ```
 
 ### Let's do associated PERMANOVA analyses to better understand significance of differences in diversity between the 3 factors
