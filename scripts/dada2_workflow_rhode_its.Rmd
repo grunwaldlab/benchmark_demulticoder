@@ -6,7 +6,7 @@ date: "2024-06-18"
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-knitr::opts_knit$set(root.dir = "~/demulticoder_benchmarking_2/rhode_DADA2_workflow")
+knitr::opts_knit$set(root.dir = "~/demulticoder_benchmarking/rhode_DADA2_workflow")
 
 library(phyloseq); packageVersion("phyloseq")
 library(ggplot2); packageVersion("ggplot2")
