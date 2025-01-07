@@ -54,13 +54,15 @@ containsPrimer <- function(primer, read) {
     grepl(pattern, as.character(read), ignore.case = TRUE)
   }))
 }
+
 # Ensure output directories exist
-path <- "data/reads"
+path1 <- "~/demulticoder_benchmarking/demulticoder_combined_analysis_rhode/data"
+path <- "~/demulticoder_benchmarking/rhode_DADA2_workflow/data/reads"
 dir.create(file.path(path, "its/demultiplexed"), recursive = TRUE, showWarnings = FALSE)
 
 
-fnFs <- sort(list.files(path, pattern="_R1.fastq.gz", full.names = TRUE))
-fnRs <- sort(list.files(path, pattern="_R2.fastq.gz", full.names = TRUE))
+fnFs <- sort(list.files(path1, pattern="_R1.fastq.gz", full.names = TRUE))
+fnRs <- sort(list.files(path1, pattern="_R2.fastq.gz", full.names = TRUE))
 
 fnFs.demultiplex <- file.path(path, "its/demultiplexed", basename(fnFs))
 fnRs.demultiplex <- file.path(path, "its/demultiplexed", basename(fnRs))
@@ -137,7 +139,7 @@ mclapply(seq_along(fnFs), process_file_pair, mc.cores = num_cores)
 fnFs.prefilt <- file.path(path, "its/prefiltered", basename(fnFs))
 fnRs.prefilt <- file.path(path, "its/prefiltered", basename(fnRs))
 
-out <- filterAndTrim(fnFs.demultiplex, fnFs.prefilt, fnRs.demultiplex, fnRs.prefilt, maxN=0, compress=TRUE, multithread=TRUE)
+out <- filterAndTrim(fnFs.demultiplex, fnFs.prefilt, fnRs.demultiplex, fnRs.prefilt, maxN=0, multithread=TRUE)
 ```
 
 ### Get stats on primer counts before running Cutadapt 
@@ -265,7 +267,7 @@ dim(seqtab)
 ``` {r remove chimeras}
 seqtab.nochim <- removeBimeraDenovo(seqtab, method="consensus", multithread=TRUE, verbose=TRUE)
 table(nchar(getSequences(seqtab.nochim)))
-sample_prefixes <- stringr::str_extract(rownames(seqtab.nochim), "^[^_]+")
+sample_prefixes <- stringr::str_remove(rownames(seqtab.nochim), "_R1\\.fastq\\.gz$")
 rownames(seqtab.nochim) <- sample_prefixes
 write.table(seqtab.nochim, file="outputs/its/its_seqtab_nochim.out",sep="\t",quote=F)
 ```
