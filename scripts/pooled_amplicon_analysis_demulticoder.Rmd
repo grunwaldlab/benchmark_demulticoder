@@ -691,14 +691,12 @@ obj_subset %>%
             node_color_interval = c(-5.2, 5.2),
             edge_color_interval = c(-5.2, 5.2),
             node_size_range = c(.005, .03),
-            node_size_trans = "log10",
+            node_size_trans = "log2",
             node_label_size_range = c(.015, .02),
             node_color_range = diverging_palette(),
             node_size_axis_label = "Mean read proportion",
-            node_color_axis_label = "Log2 fold change",
+            node_color_axis_label = "Log fold change",
             output_file = file.path('demulticoder/figures', 'diff_taxon_abund_flood.pdf'))
-
-
 ```
 
 ### Let's make differential abundance plots for our combined dataset-first let's look at diff. abundance of taxa by inoculum source
@@ -957,7 +955,7 @@ obj_olddb$data$prop
 
 ### Community composition plot-new db-showcase differences in bootstrap support values
 ```{r, overall community plot new db}
-min_bootstrap <- 60
+min_bootstrap <- 0
 obj_newdb$data$score$boot <- as.numeric(obj_newdb$data$score$boot)
 max_boot <- obj_newdb$data$score %>%
   group_by(taxon_id) %>%
@@ -1017,13 +1015,13 @@ obj_newdb %>%
             edge_color_digits = 2,
             edge_size_digits = 2,
             #aspect_ratio = 1.618,
-            output_file = file.path('demulticoder/figures', '/heattree_mostabund_taxa_rps10_newdb_boot60_greater1.pdf'))
+            output_file = file.path('demulticoder/figures', '/heattree_mostabund_taxa_rps10_newdb_boot0_greater1.pdf'))
 ```
 
 ### Community composition plot-old db-showcase differences in bootstrap support values
 ```{r, overall community plot}
 ### Community composition plot-new db-showcase differences in bootstrap support values
-min_bootstrap <- 60
+min_bootstrap <- 0
 obj_olddb$data$score$boot <- as.numeric(obj_olddb$data$score$boot)
 max_boot <- obj_olddb$data$score %>%
   group_by(taxon_id) %>%
@@ -1084,7 +1082,7 @@ obj_olddb %>%
             edge_color_digits = 2,
             edge_size_digits = 2,
             #aspect_ratio = 1.618,
-            output_file = file.path('demulticoder/figures', '/heattree_mostabund_taxa_rps10_olddb_boot60_greater1.pdf'))
+            output_file = file.path('demulticoder/figures', '/heattree_mostabund_taxa_rps10_olddb_boot0_greater1.pdf'))
 ```
 
 Let's facet the two plots so we have a side-by-side comparison of the two databases. 

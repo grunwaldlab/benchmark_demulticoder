@@ -28,7 +28,6 @@ knitr::opts_knit$set(root.dir = "~/benchmark_demulticoder")
 ```
 
 ### Alpha diversity-Let's do a direct comparison of mean inverse Simpson diversity between workflows
-
 ```{r alpha diversity comp}
 # Read in the demulticoder data
 stats_diversity_demulticoder<-read.csv("demulticoder/results/alpha_diversity.csv")
@@ -43,16 +42,290 @@ if (!all(stats_diversity_demulticoder$sample_name == stats_diversity_sf$sample_n
   stop("Sample names do not match between the two data frames.")
 }
 
+sample_name <- stats_diversity_sf$sample_name
+raw_demulticoder <- stats_diversity_demulticoder$raw_count
+raw_sf <- stats_diversity_sf$raw_count
 raw_count_diff <- stats_diversity_demulticoder$raw_count - stats_diversity_sf$raw_count
+richness_demulticoder <- stats_diversity_demulticoder$richness
+richness_sf <- stats_diversity_sf$richness
 richness_diff <- stats_diversity_demulticoder$richness - stats_diversity_sf$richness
+shannon_demulticoder <- stats_diversity_demulticoder$shannon
+shannon_sf <- stats_diversity_sf$shannon
 shannon_diff <- stats_diversity_demulticoder$shannon - stats_diversity_sf$shannon
+invsimpson_demulticoder <- stats_diversity_demulticoder$invsimpson
+invsimpson_sf <- stats_diversity_sf$invsimpson
 invsimpson_diff <- stats_diversity_demulticoder$invsimpson - stats_diversity_sf$invsimpson
 
-#Add to new table
-difference_df <- data.frame(raw_count_diff, richness_diff, shannon_diff, invsimpson_diff)
+difference_df <- data.frame(sample_name, raw_demulticoder, raw_sf, raw_count_diff, richness_demulticoder, richness_sf, richness_diff, shannon_demulticoder, shannon_sf, shannon_diff, invsimpson_demulticoder, invsimpson_sf, invsimpson_diff)
+
+# save csv
+write.csv(difference_df, "demulticoder_comp_sf/results/alpha_diversity_comparison.csv", row.names = FALSE)
+
+boxplot(raw_count_diff, main = "Raw Count Differences")
+boxplot(richness_diff, main = "Richness Differences")
+boxplot(shannon_diff, main = "Shannon Differences")
+boxplot(invsimpson_diff, main = "Inverse Simpson Differences")
+
+# Let's do a paired t-test and wilcoxon test for each of the alpha diversity metrics
+# Raw count
+wilcox.test(stats_diversity_demulticoder$raw_count, stats_diversity_sf$raw_count,paired = TRUE)
+t.test(stats_diversity_demulticoder$raw_count, stats_diversity_sf$raw_count,paired = TRUE)
+
+# Richness
+wilcox.test(stats_diversity_demulticoder$richness, stats_diversity_sf$richness,paired = TRUE)
+t.test(stats_diversity_demulticoder$richness, stats_diversity_sf$richness,paired = TRUE)
+
+# Shanonn index
+wilcox.test(stats_diversity_demulticoder$shannon, stats_diversity_sf$shannon,paired = TRUE)
+t.test(stats_diversity_demulticoder$shannon, stats_diversity_sf$shannon,paired = TRUE)
+
+#Inverse simpson
+wilcox.test(stats_diversity_demulticoder$invsimpson, stats_diversity_sf$invsimpson,paired = TRUE)
+t.test(stats_diversity_demulticoder$invsimpson, stats_diversity_sf$invsimpson,paired = TRUE)
 ```
 
-### Make summary boxplot showing inverse simpson values
+### Make similar table for nmds data
+```{r beta diversity comp}
+# Read in the demulticoder data
+nmds_demulticoder<-read.csv("demulticoder/results/compiled_stats.csv")
+nmds_sf <- read.csv("standard_workflow/combined_results/compiled_stats.csv")
+
+nmds_demulticoder <- nmds_demulticoder[order(nmds_demulticoder$sample_name), ]
+nmds_sf <-nmds_sf[order(nmds_sf$sample_name), ]
+
+nmds_sf <- nmds_sf[match(nmds_demulticoder$sample_name, nmds_sf$sample_name), ]
+
+if (!all(nmds_demulticoder$sample_name == nmds_sf$sample_name)) {
+  stop("Sample names do not match between the two data frames.")
+}
+
+nmds1_diff <- nmds_demulticoder$NMDS1 - nmds_sf$NMDS1
+nmds2_diff <- nmds_demulticoder$NMDS2 - nmds_sf$NMDS2
+
+sample_name_nmds <- nmds_sf$sample_name
+#Add to new table
+nmds_df <- data.frame(sample_name_nmds, nmds_demulticoder$NMDS1, nmds_sf$NMDS1, nmds1_diff, nmds_demulticoder$NMDS2, nmds_sf$NMDS2,  nmds2_diff)
+
+# save csv
+write.csv(nmds_df, "demulticoder_comp_sf/results/beta_diversity_comparison.csv", row.names = FALSE)
+```
+
+
+### Make facetted figure with alpha diversity and nmds data loaded above
+Start with making demulticoder boxplots-alpha diversity
+```{r facetted figure-alpha div demulticoder}
+plotted_factors <- c('Organism' = 'organism', 'Flooded' = 'flooded', 'Pathogen Concentration' = 'path_conc', 'Trial' = 'experiment')
+
+alpha_plot_data <- plotted_factors %>%
+  map2_dfr(names(plotted_factors), function(factor_col, factor_name) {
+    out <- stats_diversity_demulticoder
+    out$factor <- factor_name
+    out$value <- as.character(out[[factor_col]])
+    return(out)
+  }) %>%
+  mutate(path_conc = factor(path_conc, levels = sort(unique(path_conc)), labels = paste(sort(unique(path_conc)), 'CFU/g'), ordered = TRUE)) %>%
+  filter(sample_type == 'Sample') %>%
+  select(sample_name, factor, value, invsimpson) %>%
+  tidyr::gather(key = "index", value = "diversity", -sample_name, -factor, -value) %>%
+  mutate(value = forcats::fct_relevel(ordered(value), "Control", "Cin", "Plu", "Cry"))
+
+alpha_plot_data <- alpha_plot_data %>%
+  mutate(value = recode(value, "FALSE" = "Not Flooded", "TRUE" = "Flooded", "Control" = "Con"))
+
+anova_and_hsd <- function(x) {
+  anova_result <- aov(diversity ~ value, x)
+  tukey_result <- agricolae::HSD.test(anova_result, "value", group = TRUE)
+  group_data <- tukey_result$groups[order(rownames(tukey_result$groups)),]
+  group_key <- setNames(group_data$groups, rownames(group_data))
+  group_key[as.character(x$value)]
+}
+alpha_plot_data$group <- unlist(map(split(alpha_plot_data, alpha_plot_data$factor)[unique(alpha_plot_data$factor)], anova_and_hsd))
+
+alpha_subplot_demulticoder <- ggplot(alpha_plot_data, aes(x = value, y = diversity)) +
+  geom_boxplot(color = "black", fill = "white") +
+  geom_text(aes(x = value, y = max(diversity) + 2, label = group), col = 'black', size = 5) +
+  facet_grid(~ factor, scales = "free") +
+  labs(x = NULL, y = 'Diversity (Inverse Simpson)') +
+  guides(color = "none") +
+  theme(panel.background = element_rect(fill = "white"),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.grid.major.y = element_line(color = "gray"),
+        axis.text.x = element_text(angle = 45, hjust = 1, color = "black"),
+        axis.text.y = element_text(color = "black"),
+        axis.title.y = element_text(color = "black"),
+        legend.position = "bottom",
+        panel.border = element_rect(color = "black", fill = NA, size = 1),
+        strip.background = element_rect(fill = "white", color = "white"),
+        strip.text = element_text(color = "black"))
+
+print(alpha_subplot_demulticoder)
+```
+
+Start with making standard workflow boxplots-alpha diversity
+```{r facetted figure-alpha div standard wf}
+plotted_factors <- c('Organism' = 'organism', 'Flooded' = 'flooded', 'Pathogen Concentration' = 'path_conc', 'Trial' = 'experiment')
+
+alpha_plot_data <- plotted_factors %>%
+  map2_dfr(names(plotted_factors), function(factor_col, factor_name) {
+    out <- stats_diversity_sf
+    out$factor <- factor_name
+    out$value <- as.character(out[[factor_col]])
+    return(out)
+  }) %>%
+  mutate(path_conc = factor(path_conc, levels = sort(unique(path_conc)), labels = paste(sort(unique(path_conc)), 'CFU/g'), ordered = TRUE)) %>%
+  filter(sample_type == 'Sample') %>%
+  select(sample_name, factor, value, invsimpson) %>%
+  tidyr::gather(key = "index", value = "diversity", -sample_name, -factor, -value) %>%
+  mutate(value = forcats::fct_relevel(ordered(value), "Control", "Cin", "Plu", "Cry"))
+
+alpha_plot_data <- alpha_plot_data %>%
+  mutate(value = recode(value, "FALSE" = "Not Flooded", "TRUE" = "Flooded", "Control" = "Con"))
+
+anova_and_hsd <- function(x) {
+  anova_result <- aov(diversity ~ value, x)
+  tukey_result <- agricolae::HSD.test(anova_result, "value", group = TRUE)
+  group_data <- tukey_result$groups[order(rownames(tukey_result$groups)),]
+  group_key <- setNames(group_data$groups, rownames(group_data))
+  group_key[as.character(x$value)]
+}
+alpha_plot_data$group <- unlist(map(split(alpha_plot_data, alpha_plot_data$factor)[unique(alpha_plot_data$factor)], anova_and_hsd))
+
+alpha_subplot_sf <- ggplot(alpha_plot_data, aes(x = value, y = diversity)) +
+  geom_boxplot(color = "black", fill = "white") +
+  geom_text(aes(x = value, y = max(diversity) + 2, label = group), col = 'black', size = 5) +
+  facet_grid(~ factor, scales = "free") +
+  labs(x = NULL, y = 'Diversity (Inverse Simpson)') +
+  guides(color = "none") +
+  theme(panel.background = element_rect(fill = "white"),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.grid.major.y = element_line(color = "gray"),
+        axis.text.x = element_text(angle = 45, hjust = 1, color = "black"),
+        axis.text.y = element_text(color = "black"),
+        axis.title.y = element_text(color = "black"),
+        legend.position = "bottom",
+        panel.border = element_rect(color = "black", fill = NA, size = 1),
+        strip.background = element_rect(fill = "white", color = "white"),
+        strip.text = element_text(color = "black"))
+
+print(alpha_subplot_sf)
+```
+
+Start with making demulticoder nmds plots
+```{r facetted figure-beta div-demulticoder}
+nmds_factors <- c(Flooded = 'flooded', Organism = 'organism', 'Pathogen CFU/g' = 'path_conc', 'Trial' = 'experiment')
+
+nmds_data <- nmds_demulticoder
+
+nmds_data <- nmds_data %>%
+  mutate(flooded = as.character(flooded),
+         flooded = recode(flooded, "TRUE" = "Flooded", "FALSE" = "Not Flooded"),
+         organism = recode(organism, "Control" = "Con"))
+
+make_one_plot <- function(factor, name) {
+  nmds_data %>%
+    mutate(factor = as.character(nmds_data[[factor]]),
+           NMDS1 = scales::rescale(NMDS1),
+           NMDS2 = scales::rescale(NMDS2)) %>%
+    mutate(factor = fct_relevel(ordered(factor), "Con", "Cin", "Plu", "Cry")) %>%
+    ggplot(aes_string(x = "NMDS1", y = "NMDS2", color = "factor", label = "sample_name")) +
+    geom_point() +
+    coord_fixed() +
+    viridis::scale_color_viridis(discrete = TRUE, end = .9) +
+    labs(color = NULL, x = "NMDS1", y = "NMDS2") +
+    theme(panel.background = element_rect(fill = "white"),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          axis.text = element_text(size = 8),
+          axis.title = element_text(size = 10),
+          axis.ticks = element_line(color = "black"),
+          plot.margin = unit(rep(0.04, 4), "cm"),
+          legend.position = "bottom",
+          legend.text = element_text(size = 10),
+          legend.key.height = unit(0.25, 'cm'),
+          legend.key.width = unit(0.1, 'cm'),
+          legend.spacing = unit(0.05, 'cm'),
+          legend.margin = margin(t = -0.2, unit = 'cm'),
+          panel.border = element_rect(color = "black", fill = NA, size = 1)) +
+    guides(color = guide_legend(nrow = 2, byrow = TRUE))
+}
+
+
+nmds_subplots <- map2(nmds_factors, names(nmds_factors), make_one_plot)
+nmds_plot_demulticoder <- ggpubr::ggarrange(plotlist = c(list(ggplot() + theme_void()), nmds_subplots),
+                       nrow = 1, widths = c(0.15, 1, 1, 1, 1))
+
+nmds_plot_demulticoder
+```
+
+Start with making standard workflow nmds plots
+```{r facetted figure-beta div-demulticoder}
+nmds_factors <- c(Flooded = 'flooded', Organism = 'organism', 'Pathogen CFU/g' = 'path_conc', 'Trial' = 'experiment')
+
+nmds_data <- nmds_sf
+
+nmds_data <- nmds_data %>%
+  mutate(flooded = as.character(flooded),
+         flooded = recode(flooded, "TRUE" = "Flooded", "FALSE" = "Not Flooded"),
+         organism = recode(organism, "Control" = "Con"))
+
+make_one_plot <- function(factor, name) {
+  nmds_data %>%
+    mutate(factor = as.character(nmds_data[[factor]]),
+           NMDS1 = scales::rescale(NMDS1),
+           NMDS2 = scales::rescale(NMDS2)) %>%
+    mutate(factor = fct_relevel(ordered(factor), "Con", "Cin", "Plu", "Cry")) %>%
+    ggplot(aes_string(x = "NMDS1", y = "NMDS2", color = "factor", label = "sample_name")) +
+    geom_point() +
+    coord_fixed() +
+    viridis::scale_color_viridis(discrete = TRUE, end = .9) +
+    labs(color = NULL, x = "NMDS1", y = "NMDS2") +
+    theme(panel.background = element_rect(fill = "white"),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          axis.text = element_text(size = 8),
+          axis.title = element_text(size = 10),
+          axis.ticks = element_line(color = "black"),
+          plot.margin = unit(rep(0.04, 4), "cm"),
+          legend.position = "bottom",
+          legend.text = element_text(size = 10),
+          legend.key.height = unit(0.25, 'cm'),
+          legend.key.width = unit(0.1, 'cm'),
+          legend.spacing = unit(0.05, 'cm'),
+          legend.margin = margin(t = -0.2, unit = 'cm'),
+          panel.border = element_rect(color = "black", fill = NA, size = 1)) +
+    guides(color = guide_legend(nrow = 2, byrow = TRUE))
+}
+
+
+nmds_subplots <- map2(nmds_factors, names(nmds_factors), make_one_plot)
+nmds_plot_sf <- ggpubr::ggarrange(plotlist = c(list(ggplot() + theme_void()), nmds_subplots),
+                       nrow = 1, widths = c(0.15, 1, 1, 1, 1))
+
+nmds_plot_sf
+```
+
+#Now facet into A-D
+```{r facet figure-beta div}
+library(cowplot)
+
+# Combine the plots
+combined_div_plot <- plot_grid(alpha_subplot_demulticoder, alpha_subplot_sf, nmds_plot_demulticoder, nmds_plot_sf, 
+                               ncol = 2, labels = c('A', 'B', 'C', 'D'), 
+                               rel_heights = c(0.5, 0.5, 1, 1))
+
+# Adjust the layout to reduce white space and adjust margins
+combined_div_plot <- combined_div_plot + 
+  theme(plot.margin = unit(c(1, 1, 1, 1), "cm"))
+
+# Save the plot with the specified dimensions
+ggsave(combined_div_plot, path = "demulticoder_comp_sf/figures", filename = "diversity_demulticoder_sf.pdf", 
+       width = 14.5, height = 7, bg = "#FFFFFF")
+
+ggsave(combined_div_plot, path = "demulticoder_comp_sf/figures", filename = "diversity_demulticoder_sf.svg", 
+       width = 14.5, height = 7, bg = "#FFFFFF")
+```
 
 ### Convert ASV matrices to taxmap objects-old db
 ```{r convert to taxmap obj-compare old and new db}
