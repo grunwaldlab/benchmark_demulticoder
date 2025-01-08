@@ -905,29 +905,17 @@ another taxmap object</h3>
 <span id="cb9-38"><a href="#cb9-38" tabindex="-1"></a>  })</span>
 <span id="cb9-39"><a href="#cb9-39" tabindex="-1"></a>  <span class="fu">saveRDS</span>(aligned_data, <span class="at">file =</span> aligned_data_path)</span>
 <span id="cb9-40"><a href="#cb9-40" tabindex="-1"></a>}</span>
-<span id="cb9-41"><a href="#cb9-41" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Processing species: Phytophthora_cinnamomi&quot;</span></span>
-<span id="cb9-42"><a href="#cb9-42" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Processing species: Phytophthora_cinnamomi&quot;</span></span>
-<span id="cb9-43"><a href="#cb9-43" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Processing species: Phytophthora_cinnamomi&quot;</span></span>
-<span id="cb9-44"><a href="#cb9-44" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Processing species: Phytophthora_cinnamomi&quot;</span></span>
-<span id="cb9-45"><a href="#cb9-45" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Processing species: Phytophthora_cinnamomi&quot;</span></span>
-<span id="cb9-46"><a href="#cb9-46" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Processing species: Phytophthora_cinnamomi&quot;</span></span>
-<span id="cb9-47"><a href="#cb9-47" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Processing species: Phytophthora_plurivora&quot;</span></span>
-<span id="cb9-48"><a href="#cb9-48" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Processing species: Phytophthora_plurivora&quot;</span></span>
-<span id="cb9-49"><a href="#cb9-49" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Processing species: Phytophthora_plurivora&quot;</span></span>
-<span id="cb9-50"><a href="#cb9-50" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Processing species: Phytophthora_cinnamomi&quot;</span></span>
-<span id="cb9-51"><a href="#cb9-51" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Processing species: Pythium_cryptoirregulare&quot;</span></span>
-<span id="cb9-52"><a href="#cb9-52" tabindex="-1"></a><span class="co">#&gt; [1] &quot;Processing species: Pythium_cryptoirregulare&quot;</span></span>
-<span id="cb9-53"><a href="#cb9-53" tabindex="-1"></a></span>
-<span id="cb9-54"><a href="#cb9-54" tabindex="-1"></a><span class="co"># Convert ASV abundances to proportions for use with matches</span></span>
-<span id="cb9-55"><a href="#cb9-55" tabindex="-1"></a>abundance_prop <span class="ot">&lt;-</span> abundance</span>
-<span id="cb9-56"><a href="#cb9-56" tabindex="-1"></a>abundance_prop[metadata<span class="sc">$</span>sample_name] <span class="ot">&lt;-</span> <span class="fu">lapply</span>(abundance_prop[metadata<span class="sc">$</span>sample_name], <span class="cf">function</span>(counts) counts<span class="sc">/</span><span class="fu">sum</span>(counts))</span>
-<span id="cb9-57"><a href="#cb9-57" tabindex="-1"></a></span>
-<span id="cb9-58"><a href="#cb9-58" tabindex="-1"></a>innoculum_asv_mismatch_threshold <span class="ot">&lt;-</span><span class="dv">1</span></span>
-<span id="cb9-59"><a href="#cb9-59" tabindex="-1"></a><span class="co"># Sum the read counts of ASVs representing the same species used for inoculation</span></span>
-<span id="cb9-60"><a href="#cb9-60" tabindex="-1"></a>infection_data <span class="ot">&lt;-</span> aligned_data <span class="sc">%&gt;%</span></span>
-<span id="cb9-61"><a href="#cb9-61" tabindex="-1"></a>  <span class="fu">filter</span>(mismatch <span class="sc">&lt;=</span> innoculum_asv_mismatch_threshold) <span class="sc">%&gt;%</span></span>
-<span id="cb9-62"><a href="#cb9-62" tabindex="-1"></a>  <span class="fu">left_join</span>(abundance_prop, <span class="at">by =</span> <span class="fu">c</span>(<span class="at">asv_seq =</span> <span class="st">&quot;sequence&quot;</span>)) <span class="sc">%&gt;%</span></span>
-<span id="cb9-63"><a href="#cb9-63" tabindex="-1"></a>  <span class="fu">group_by</span>(asv_seq) <span class="sc">%&gt;%</span> <span class="fu">slice_min</span>(mismatch, <span class="at">with_ties =</span> <span class="cn">FALSE</span>) <span class="co"># Only consider the best match per ASV</span></span></code></pre></div>
+<span id="cb9-41"><a href="#cb9-41" tabindex="-1"></a></span>
+<span id="cb9-42"><a href="#cb9-42" tabindex="-1"></a><span class="co"># Convert ASV abundances to proportions for use with matches</span></span>
+<span id="cb9-43"><a href="#cb9-43" tabindex="-1"></a>abundance_prop <span class="ot">&lt;-</span> abundance</span>
+<span id="cb9-44"><a href="#cb9-44" tabindex="-1"></a>abundance_prop[metadata<span class="sc">$</span>sample_name] <span class="ot">&lt;-</span> <span class="fu">lapply</span>(abundance_prop[metadata<span class="sc">$</span>sample_name], <span class="cf">function</span>(counts) counts<span class="sc">/</span><span class="fu">sum</span>(counts))</span>
+<span id="cb9-45"><a href="#cb9-45" tabindex="-1"></a></span>
+<span id="cb9-46"><a href="#cb9-46" tabindex="-1"></a>innoculum_asv_mismatch_threshold <span class="ot">&lt;-</span><span class="dv">1</span></span>
+<span id="cb9-47"><a href="#cb9-47" tabindex="-1"></a><span class="co"># Sum the read counts of ASVs representing the same species used for inoculation</span></span>
+<span id="cb9-48"><a href="#cb9-48" tabindex="-1"></a>infection_data <span class="ot">&lt;-</span> aligned_data <span class="sc">%&gt;%</span></span>
+<span id="cb9-49"><a href="#cb9-49" tabindex="-1"></a>  <span class="fu">filter</span>(mismatch <span class="sc">&lt;=</span> innoculum_asv_mismatch_threshold) <span class="sc">%&gt;%</span></span>
+<span id="cb9-50"><a href="#cb9-50" tabindex="-1"></a>  <span class="fu">left_join</span>(abundance_prop, <span class="at">by =</span> <span class="fu">c</span>(<span class="at">asv_seq =</span> <span class="st">&quot;sequence&quot;</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb9-51"><a href="#cb9-51" tabindex="-1"></a>  <span class="fu">group_by</span>(asv_seq) <span class="sc">%&gt;%</span> <span class="fu">slice_min</span>(mismatch, <span class="at">with_ties =</span> <span class="cn">FALSE</span>) <span class="co"># Only consider the best match per ASV</span></span></code></pre></div>
 </div>
 <div id="prepare-trimmed-tables-for-subsequent-analysis" class="section level3">
 <h3>Prepare trimmed tables for subsequent analysis</h3>
@@ -2310,7 +2298,7 @@ times</h3>
 <span id="cb21-9"><a href="#cb21-9" tabindex="-1"></a><span class="co">#&gt;  collate  en_US.UTF-8</span></span>
 <span id="cb21-10"><a href="#cb21-10" tabindex="-1"></a><span class="co">#&gt;  ctype    en_US.UTF-8</span></span>
 <span id="cb21-11"><a href="#cb21-11" tabindex="-1"></a><span class="co">#&gt;  tz       America/Los_Angeles</span></span>
-<span id="cb21-12"><a href="#cb21-12" tabindex="-1"></a><span class="co">#&gt;  date     2025-01-07</span></span>
+<span id="cb21-12"><a href="#cb21-12" tabindex="-1"></a><span class="co">#&gt;  date     2025-01-08</span></span>
 <span id="cb21-13"><a href="#cb21-13" tabindex="-1"></a><span class="co">#&gt;  pandoc   3.1.1 @ /Applications/RStudio.app/Contents/Resources/app/quarto/bin/tools/ (via rmarkdown)</span></span>
 <span id="cb21-14"><a href="#cb21-14" tabindex="-1"></a><span class="co">#&gt; </span></span>
 <span id="cb21-15"><a href="#cb21-15" tabindex="-1"></a><span class="co">#&gt; ─ Packages ───────────────────────────────────────────────────────────────────</span></span>

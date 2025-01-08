@@ -616,7 +616,7 @@ alpha_subplot <- ggplot(alpha_plot_data, aes(x = value, y = diversity)) +
 
 ## Beta diversity
 ```{r}
-set.seed(1)
+set.seed(20)
 prob_table <- obj$data$prop[metadata$sample_name]
 nmds_plot_data <- function(prob_table) {
   metadata <- metadata[metadata$sample_name %in% colnames(prob_table), ]
@@ -630,6 +630,10 @@ nmds_plot_data <- function(prob_table) {
 }
 
 nmds_data <- nmds_plot_data(prob_table[! is.na(metadata$organism) & metadata$valid_inoc])
+
+#Results are arbitrarily mirrored compared to my demulticoder analyses, so I will fix this here, without changing hte meaning
+
+nmds_data$NMDS2 <- -nmds_data$NMDS2
 
 nmds_factors <- c(Flooded = 'flooded', Organism = 'organism', 'Pathogen CFU/g' = 'path_conc', 'Trial' = 'experiment')
 
