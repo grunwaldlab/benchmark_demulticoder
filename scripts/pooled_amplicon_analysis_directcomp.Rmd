@@ -336,18 +336,57 @@ ggsave(combined_div_plot, path = "demulticoder_comp_sf/figures", filename = "div
 ```
 
 ### DESEQ2-flood side-by-side
+I need to adjust the dimensions
 ```{r facet figure-beta div}
+demulticoder_flood <- image_read_pdf("demulticoder/figures/diff_taxon_abund_flood.pdf")
+sf_flood <- image_read_pdf("standard_workflow/combined_figures/diff_taxon_abund_flood.pdf")
+
+sf_grob <- rasterGrob(as.raster(sf_flood))
+demulticoder_grob <- rasterGrob(as.raster(demulticoder_flood))
+
+### Now try saving the plot using cowplot
+combined_heat_trees <- plot_grid(demulticoder_grob, sf_grob, ncol = 2, labels = c('A.', 'B.'), 
+                                 rel_heights = c(1, 1))
+
+# Adjust the layout to reduce white space and adjust margins
+combined_heat_trees <- combined_heat_trees + 
+  theme(plot.margin = unit(c(0.5, 0.5, 0.5, 0.5), "cm"))
+
+# Save the plot with the specified dimensions
+ggsave(combined_heat_trees, path = "demulticoder_comp_sf/figures", filename = "combined_heat_trees_deseq2_flood.pdf", 
+       width = 7, height = 4.5, bg = "#FFFFFF")
 
 ```
 
 ### DESEQ2-flood-flood-difference_comparison
 ```{r facet figure-beta div}
-
+#In progress
 ```
 
 ### Heat trees of most abundant taxa-side-by-side comparison
 ```{r facet figure-beta div}
+demulticoder_flood <- image_read_pdf("demulticoder/figures/heattree_mostabund_taxa.pdf")
+sf_flood <- image_read_pdf("standard_workflow/combined_figures/heattree_mostabund_taxa.pdf")
 
+sf_grob <- rasterGrob(as.raster(sf_flood))
+demulticoder_grob <- rasterGrob(as.raster(demulticoder_flood))
+
+### Now try saving the plot using cowplot
+combined_heat_trees <- plot_grid(demulticoder_grob, sf_grob, ncol = 2, labels = c('A.', 'B.'), 
+                                 rel_heights = c(1, 1), align = "v")
+
+# Adjust the layout to reduce white space and adjust margins
+combined_heat_trees <- combined_heat_trees + 
+  theme(plot.margin = unit(c(0.5, 0.5, 0.5, 0.5), "cm"))
+
+# Save the plot with the specified dimensions
+ggsave(combined_heat_trees, path = "demulticoder_comp_sf/figures", filename = "mostabund_taxa_combined.pdf", 
+       width =7, height = 4.5, bg = "#FFFFFF")
+```
+
+### Heat trees of most abundant taxa-side-by-side comparison
+```{r facet figure-beta div}
+#Alt approach in progress
 ```
 
 ```{r session info}

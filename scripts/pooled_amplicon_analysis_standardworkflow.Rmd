@@ -811,7 +811,7 @@ obj_subset <- filter_taxa(obj_subset, max_boot[taxon_ids] >= min_bootstrap | tax
 ```
 
 ### Let's make differential abundance plots for our combined dataset-first let's look at diff. abundance of taxa by whether plots were flooded or not
-```{r abundance plots-flood, fig.height=30, fig.width=30, message=FALSE, echo=FALSE}
+```{r abundance plots-flood, message=FALSE, echo=FALSE}
 obj_subset <- obj2 %>%
   filter_taxa(taxon_ranks == "Species", supertaxa = TRUE, reassign_obs = c(tax_abund = FALSE)) 
 
@@ -839,8 +839,8 @@ obj_subset %>%
             node_size = tax_prop,
             node_color = ifelse(is.na(padj) | padj > 0.05, 0, log2FoldChange), # difference between groups
             node_color_trans = "linear",
-            node_color_interval = c(-5.2, 5.2),
-            edge_color_interval = c(-5.2, 5.2),
+            node_color_interval = c(-6.5, 6.5),
+            edge_color_interval = c(-6.5, 6.5),
             node_size_range = c(.005, .03),
             node_size_trans = "log2",
             node_label_size_range = c(.015, .02),

@@ -1086,38 +1086,24 @@ obj_olddb %>%
 ```
 
 Let's facet the two plots so we have a side-by-side comparison of the two databases. 
-```{r, facet community plot,fig.height=30, fig.width=30, message=FALSE, echo=FALSE}
-old_db <- image_read_pdf("demulticoder/figures/heattree_mostabund_taxa_rps10_olddb_boot60_greater1.pdf")
-new_db <- image_read_pdf("demulticoder/figures/heattree_mostabund_taxa_rps10_newdb_boot60_greater1.pdf")
-
-max_width <- max(image_info(old_db)$width, image_info(new_db)$width)
-max_height <- max(image_info(old_db)$height, image_info(new_db)$height)
-
-old_db_resized <- image_resize(old_db, paste0(max_width, "x", max_height, "!"))
-new_db_resized <- image_resize(new_db, paste0(max_width, "x", max_height, "!"))
+```{r, facet community plot, message=FALSE, echo=FALSE}
+old_db <- image_read_pdf("demulticoder/figures/heattree_mostabund_taxa_rps10_olddb_boot0_greater1.pdf")
+new_db <- image_read_pdf("demulticoder/figures/heattree_mostabund_taxa_rps10_newdb_boot0_greater1.pdf")
 
 old_grob <- rasterGrob(as.raster(old_db))
 new_grob <- rasterGrob(as.raster(new_db))
 
-pdf("demulticoder/figures/combined_heat_trees_db_compare_boot60_greater1.pdf", width=8, height=6)
-grid.newpage()
-pushViewport(viewport(layout = grid.layout(2, 2, 
-                                           heights = unit(c(0.1, 1), "null"),
-                                           widths = unit(c(1, 1), "null"))))
+### Now try saving the plot using cowplot
+combined_heat_trees <- plot_grid(old_grob, new_grob, ncol = 2, labels = c('A.', 'B.'), 
+                                 rel_heights = c(1, 1))
 
-place_grob <- function(grob, row, col, label) {
-  pushViewport(viewport(layout.pos.row = row, layout.pos.col = col))
-  grid.text(label, y = unit(1, "npc") + unit(0.5, "lines"), 
-            gp = gpar(fontsize = 12, fontface = "bold"))
-  pushViewport(viewport(height = unit(0.9, "npc")))
-  grid.draw(grob)
-  upViewport(2)
-}
+# Adjust the layout to reduce white space and adjust margins
+combined_heat_trees <- combined_heat_trees + 
+  theme(plot.margin = unit(c(0.5, 0.5, 0.5, 0.5), "cm"))
 
-place_grob(old_grob, 2, 1, "A. Original oomyceteDB database")
-place_grob(new_grob, 2, 2, "B. Updated oomyceteDB database")
-
-dev.off()
+# Save the plot with the specified dimensions
+ggsave(combined_heat_trees, path = "demulticoder/figures", filename = "combined_heat_trees_db_compare_0boot.pdf", 
+       width = 7, height = 4.5, bg = "#FFFFFF")
 ```
 
 ### Summary stats comparing db
