@@ -358,9 +358,9 @@ display: none;
 <div id="read-in-data" class="section level3">
 <h3>Read in data</h3>
 <pre class="r"><code>cox1 &lt;- ape::read.tree(&quot;rps10_cox1_phylogeny/data/cox1_mafft2_aligned_auto_ugenetrim.fasta.treefile&quot;)
-cox1 &lt;- midpoint(cox1)
+#cox1 &lt;- midpoint(cox1)
 rps10 &lt;- read.tree(&quot;rps10_cox1_phylogeny/data/rps10_mafft2_aligned_auto_ugenetrim.fasta.treefile&quot;)
-rps10 &lt;- midpoint(rps10)
+#rps10 &lt;- midpoint(rps10)
 
 datasettable &lt;- read.table(&quot;rps10_cox1_phylogeny/data/phyloinfo_cox1rps10.txt&quot;, sep = &quot;\t&quot;, header = TRUE, stringsAsFactors = FALSE, quote = &quot;&quot;)
 assoctable &lt;- read.table(&quot;rps10_cox1_phylogeny/data/assoc_table.txt&quot;, sep = &quot;\t&quot;, header = TRUE, stringsAsFactors = FALSE, quote = &quot;&quot;)</code></pre>
@@ -407,7 +407,7 @@ print(&quot;cox1 tip labels and colors:&quot;)</code></pre>
 <pre><code>## [1] &quot;cox1 tip labels and colors:&quot;</code></pre>
 <pre class="r"><code>print(data.frame(tip.label = cox1$tip.label, color = cox1_tip_colors))</code></pre>
 <pre><code>##                                    tip.label         color
-## 1           Hyaloperonospora_adentariae_2928 darkturquoise
+## 1            Hyaloperonospora_dentariae_2928 darkturquoise
 ## 2               Hyaloperonospora_arabis_2697 darkturquoise
 ## 3                Peronospora_aestivalis_2290       #3399FF
 ## 4                Peronospora_aestivalis_2679       #3399FF
@@ -799,7 +799,7 @@ print(&quot;cox1 tip labels and colors:&quot;)</code></pre>
 <pre><code>## [1] &quot;rps10 tip labels and colors:&quot;</code></pre>
 <pre class="r"><code>print(data.frame(tip.label = rps10$tip.label, color = rps10_tip_colors))</code></pre>
 <pre><code>##                                    tip.label         color
-## 1           Hyaloperonospora_adentariae_2928 darkturquoise
+## 1            Hyaloperonospora_dentariae_2928 darkturquoise
 ## 2               Hyaloperonospora_arabis_2697 darkturquoise
 ## 3                Hyaloperonospora_malyi_2895 darkturquoise
 ## 4                Peronospora_aestivalis_2290       #3399FF
@@ -1242,7 +1242,7 @@ cox1_node_colors &lt;- color_nodes(obj$trees[[1]], t1support$color)
 rps10_node_colors &lt;- color_nodes(obj$trees[[2]], t2support$color)
 
 # Plot the cophylogeny
-pdf(&quot;rps10_cox1_phylogeny/figures/figure_cox_vs_rps10_unique_auto_rotatemultitrue_midpoint_coloredges.pdf&quot;, width = 8.5, height = 11, useDingbats = FALSE)
+pdf(&quot;rps10_cox1_phylogeny/figures/figure_cox_vs_rps10_unique_auto_rotatemultitrue_nomidpoint_coloredges.pdf&quot;, width = 8.5, height = 11, useDingbats = FALSE)
 plot(obj, tip.len = 0.01, fsize = 0.20, scale.bar = c(0.2, 0.2), pts = FALSE, link.lwd = 1, link.col = link_colors, edge.col = edge.col)
 
 # Add tip labels with colors
@@ -1263,7 +1263,7 @@ dev.off()</code></pre>
 ##  collate  en_US.UTF-8
 ##  ctype    en_US.UTF-8
 ##  tz       America/Los_Angeles
-##  date     2025-01-06
+##  date     2025-01-10
 ##  pandoc   3.1.1 @ /Applications/RStudio.app/Contents/Resources/app/quarto/bin/tools/ (via rmarkdown)
 ## 
 ## ─ Packages ───────────────────────────────────────────────────────────────────

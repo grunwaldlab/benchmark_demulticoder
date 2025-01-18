@@ -1,6 +1,8 @@
 ---
 title: "Pooled amplicon analysis-demulticoder"
-output: html_document
+output:
+  html_document: default
+  pdf_document: default
 date: "2024-12-24"
 ---
 
@@ -38,7 +40,7 @@ asv_matrix_rps10 <- asv_matrix_rps10[, -1]
 colnames(asv_matrix_rps10)[3:ncol(asv_matrix_rps10)] <- gsub("_rps10$", "", colnames(asv_matrix_rps10)[3:ncol(asv_matrix_rps10)])
 
 asv_matrix_its<-read.csv("demulticoder/data/final_asv_abundance_matrix_its.csv")
-asv_matrix_its$dada2_tax <- gsub("Fungi", "Eukaryota--100--Domain;Fungi", asv_matrix_its$dada2_tax)
+asv_matrix_its$dada2_tax <- gsub("Fungi--", "Eukaryota--100--Domain;Fungi--", asv_matrix_its$dada2_tax)
 asv_matrix_its <- asv_matrix_its[, -1]
 colnames(asv_matrix_its)[3:ncol(asv_matrix_rps10)] <- gsub("_its$", "", colnames(asv_matrix_its)[3:ncol(asv_matrix_its)])
 
@@ -489,6 +491,7 @@ nmds_plot_data <- function(prob_table) {
 }
 
 nmds_data <- nmds_plot_data(prob_table[! is.na(metadata$organism) & metadata$valid_inoc])
+#nmds_data <- nmds_plot_data(prob_table)
 
 nmds_factors <- c(Flooded = 'flooded', Organism = 'organism', 'Pathogen CFU/g' = 'path_conc', 'Trial' = 'experiment')
 
@@ -663,10 +666,9 @@ obj_subset <- filter_taxa(obj_subset, max_boot[taxon_ids] >= min_bootstrap | tax
 
 ### Let's make differential abundance plots for our combined dataset-first let's look at diff. abundance of taxa by whether plots were flooded or not
 ```{r abundance plots-flood, fig.height=30, fig.width=30, message=FALSE, echo=FALSE}
-obj_subset <- obj2 %>%
-  filter_taxa(taxon_ranks == "Species", supertaxa = TRUE, reassign_obs = c(tax_abund = FALSE)) 
-
 # Calculate difference between groups
+metadata$flooded <- ifelse(metadata$flooded == TRUE, "Flooded", "Not Flooded")
+
 obj_subset$data$diff_table_flood <- calc_diff_abund_deseq2(obj_subset, data = "tax_abund",
                                                            cols = metadata$sample_name[!is.na(metadata$flooded)],
                                                            groups = metadata$flooded[!is.na(metadata$flooded)])
@@ -676,6 +678,8 @@ significant_taxon_ids <- unique(
 
 range(obj_subset$data$diff_table_flood$padj, finite = TRUE) 
 range(obj_subset$data$diff_table_flood$log2FoldChange, finite = TRUE) 
+
+write.csv(obj_subset$data$diff_table_flood[obj_subset$data$diff_table_flood$padj < 0.05,], file = "demulticoder/results/diff_table_flood.csv")
 
 set.seed = 1000
 obj_subset %>%
@@ -849,10 +853,10 @@ obj_subset$data$tax_data$rel_stand_dev <- map_dbl(1:nrow(obj_subset$data$tax_abu
 })
 obj_subset
 
-set.seed(1000)
+set.seed(5)
 obj_subset %>%
   filter_taxa(! is_stem) %>%
-  filter_taxa(n_samples >= 10, supertaxa = TRUE, reassign_obs = FALSE) %>%
+  filter_taxa(n_samples >= 50, supertaxa = TRUE, reassign_obs = FALSE) %>%
   filter_taxa(! grepl(x = taxon_names, "_sp$"), reassign_obs = FALSE) %>%
   filter_taxa(! grepl(x = taxon_names, "incertae_sedis", ignore.case = TRUE), reassign_obs = FALSE) %>%
   remove_redundant_names() %>%
@@ -1103,6 +1107,9 @@ combined_heat_trees <- combined_heat_trees +
 
 # Save the plot with the specified dimensions
 ggsave(combined_heat_trees, path = "demulticoder/figures", filename = "combined_heat_trees_db_compare_0boot.pdf", 
+       width = 7, height = 4.5, bg = "#FFFFFF")
+
+ggsave(combined_heat_trees, path = "demulticoder/figures", filename = "combined_heat_trees_db_compare_0boot.svg", 
        width = 7, height = 4.5, bg = "#FFFFFF")
 ```
 

@@ -25,9 +25,9 @@ set.seed(seed)
 ### Read in data
 ```{r, read in data}
 cox1 <- ape::read.tree("rps10_cox1_phylogeny/data/cox1_mafft2_aligned_auto_ugenetrim.fasta.treefile")
-cox1 <- midpoint(cox1)
+#cox1 <- midpoint(cox1)
 rps10 <- read.tree("rps10_cox1_phylogeny/data/rps10_mafft2_aligned_auto_ugenetrim.fasta.treefile")
-rps10 <- midpoint(rps10)
+#rps10 <- midpoint(rps10)
 
 datasettable <- read.table("rps10_cox1_phylogeny/data/phyloinfo_cox1rps10.txt", sep = "\t", header = TRUE, stringsAsFactors = FALSE, quote = "")
 assoctable <- read.table("rps10_cox1_phylogeny/data/assoc_table.txt", sep = "\t", header = TRUE, stringsAsFactors = FALSE, quote = "")
@@ -128,7 +128,7 @@ cox1_node_colors <- color_nodes(obj$trees[[1]], t1support$color)
 rps10_node_colors <- color_nodes(obj$trees[[2]], t2support$color)
 
 # Plot the cophylogeny
-pdf("rps10_cox1_phylogeny/figures/figure_cox_vs_rps10_unique_auto_rotatemultitrue_midpoint_coloredges.pdf", width = 8.5, height = 11, useDingbats = FALSE)
+pdf("rps10_cox1_phylogeny/figures/figure_cox_vs_rps10_unique_auto_rotatemultitrue_nomidpoint_coloredges.pdf", width = 8.5, height = 11, useDingbats = FALSE)
 plot(obj, tip.len = 0.01, fsize = 0.20, scale.bar = c(0.2, 0.2), pts = FALSE, link.lwd = 1, link.col = link_colors, edge.col = edge.col)
 
 # Add tip labels with colors

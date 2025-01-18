@@ -1,6 +1,8 @@
 ---
 title: "Pooled amplicon analysis-directcompare"
-output: html_document
+output:
+  html_document: default
+  pdf_document: default
 date: "2024-12-24"
 ---
 
@@ -266,7 +268,7 @@ nmds_plot_demulticoder
 ```
 
 Start with making standard workflow nmds plots
-```{r facetted figure-beta div-demulticoder}
+```{r facetted figure-beta div-sf}
 nmds_factors <- c(Flooded = 'flooded', Organism = 'organism', 'Pathogen CFU/g' = 'path_conc', 'Trial' = 'experiment')
 
 nmds_data <- nmds_sf
@@ -315,12 +317,12 @@ nmds_plot_sf
 ```
 
 #Now facet into A-D
-```{r facet figure-beta div}
+```{r facetted figure-beta div}
 library(cowplot)
 
 # Combine the plots
 combined_div_plot <- plot_grid(alpha_subplot_demulticoder, alpha_subplot_sf, nmds_plot_demulticoder, nmds_plot_sf, 
-                               ncol = 2, labels = c('A', 'B', 'C', 'D'), 
+                               ncol = 2, labels = c('A.', 'B.', 'C.', 'D.'), 
                                rel_heights = c(0.5, 0.5, 1, 1))
 
 # Adjust the layout to reduce white space and adjust margins
@@ -337,7 +339,7 @@ ggsave(combined_div_plot, path = "demulticoder_comp_sf/figures", filename = "div
 
 ### DESEQ2-flood side-by-side
 I need to adjust the dimensions
-```{r facet figure-beta div}
+```{r facetted figure-deseq}
 demulticoder_flood <- image_read_pdf("demulticoder/figures/diff_taxon_abund_flood.pdf")
 sf_flood <- image_read_pdf("standard_workflow/combined_figures/diff_taxon_abund_flood.pdf")
 
@@ -356,15 +358,17 @@ combined_heat_trees <- combined_heat_trees +
 ggsave(combined_heat_trees, path = "demulticoder_comp_sf/figures", filename = "combined_heat_trees_deseq2_flood.pdf", 
        width = 7, height = 4.5, bg = "#FFFFFF")
 
+ggsave(combined_heat_trees, path = "demulticoder_comp_sf/figures", filename = "combined_heat_trees_deseq2_flood.svg", 
+       width = 7, height = 4.5, bg = "#FFFFFF")
 ```
 
 ### DESEQ2-flood-flood-difference_comparison
-```{r facet figure-beta div}
+```{r facet figure-deseq continued}
 #In progress
 ```
 
 ### Heat trees of most abundant taxa-side-by-side comparison
-```{r facet figure-beta div}
+```{r facet figure-most abundant taxa}
 demulticoder_flood <- image_read_pdf("demulticoder/figures/heattree_mostabund_taxa.pdf")
 sf_flood <- image_read_pdf("standard_workflow/combined_figures/heattree_mostabund_taxa.pdf")
 
@@ -382,10 +386,13 @@ combined_heat_trees <- combined_heat_trees +
 # Save the plot with the specified dimensions
 ggsave(combined_heat_trees, path = "demulticoder_comp_sf/figures", filename = "mostabund_taxa_combined.pdf", 
        width =7, height = 4.5, bg = "#FFFFFF")
+
+ggsave(combined_heat_trees, path = "demulticoder_comp_sf/figures", filename = "mostabund_taxa_combined.svg", 
+       width =7, height = 4.5, bg = "#FFFFFF")
 ```
 
 ### Heat trees of most abundant taxa-side-by-side comparison
-```{r facet figure-beta div}
+```{r most abundant taxa cont}
 #Alt approach in progress
 ```
 
