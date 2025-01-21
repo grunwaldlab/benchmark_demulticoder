@@ -679,6 +679,18 @@ significant_taxon_ids <- unique(
 range(obj_subset$data$diff_table_flood$padj, finite = TRUE) 
 range(obj_subset$data$diff_table_flood$log2FoldChange, finite = TRUE) 
 
+# add associated taxonoimc assignments before exporting table data16S_nowf_separate <- data16S_nowf %>% 
+  group_by(Treatuntreat_EP, Kingdom, Phylum) %>% 
+  summarise(Abundance = sum(Abundance), Prevalence = n_distinct(Sample)) %>% 
+  ungroup() %>% 
+  group_by(Treatuntreat_EP) %>% 
+  mutate(Total_Abundance = sum(Abundance)) %>% 
+  ungroup() %>% 
+  mutate(Prop = Abundance / Total_Abundance)
+
+data16S_nowf_separate_filt <- data16S_nowf_separate %>%
+  filter(Prop > 0.01)
+
 write.csv(obj_subset$data$diff_table_flood[obj_subset$data$diff_table_flood$padj < 0.05,], file = "demulticoder/results/diff_table_flood.csv")
 
 set.seed = 1000

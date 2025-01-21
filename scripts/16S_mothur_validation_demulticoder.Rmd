@@ -138,7 +138,7 @@ objs$phyloseq_r16S <- phyloseq::prune_samples(phyloseq::sample_names(objs$phylos
 alpha_div<-phyloseq::plot_richness(objs$phyloseq_r16S, x="Day", measures=c("Shannon", "Simpson"), color="When")
 
 #Let's save a figure of the alpha diversity results
-ggsave("~/benchmark_demulticoder/mothur_16S_sop/figures/alpha_diversity.pdf", alpha_div, width=8, height=6)
+ggsave("~/benchmark_demulticoder/mothur_16S_sop/figures/alpha_diversity.pdf", alpha_div, width=4, height=3)
 ```
 
 ### Step 8-Examine ordination plots as additional point of comparison with DADA2 tutorial
@@ -148,7 +148,7 @@ ps.prop <- phyloseq::transform_sample_counts(objs$phyloseq_r16S, function(otu) o
 ord.nmds.bray <- phyloseq::ordinate(ps.prop, method="NMDS", distance="bray")
 beta_div <- phyloseq::plot_ordination(ps.prop, ord.nmds.bray, color="When")
 
-ggsave("~/benchmark_demulticoder/mothur_16S_sop/figures/beta_diversity.pdf", beta_div, width=8, height=6)
+ggsave("~/benchmark_demulticoder/mothur_16S_sop/figures/beta_diversity.pdf", beta_div, width=4.5, height=3)
 ```
 
 ### Step 9-Let's look at what the top 20 taxa are in the early vs. late samples  time points, as shown in the dada2 tutorial
@@ -157,17 +157,15 @@ top20 <- names(sort(phyloseq::taxa_sums(objs$phyloseq_r16S), decreasing=TRUE))[1
 ps.top20 <- phyloseq::transform_sample_counts(objs$phyloseq_r16S, function(OTU) OTU/sum(OTU))
 ps.top20 <- phyloseq::prune_taxa(top20, ps.top20)
 top20_phylo<-phyloseq::plot_bar(ps.top20, x="Day", fill="Family") + ggplot2::facet_wrap(~When, scales="free_x")
-top20<-ggsave("~/benchmark_demulticoder/mothur_16S_sop/figures/top20_taxa.pdf", top20_phylo, width=8, height=6)
-
-
+top20<-ggsave("~/benchmark_demulticoder/mothur_16S_sop/figures/top20_taxa.pdf", top20_phylo, width=4.5, height=3)
 ```
 
 ### Let's facet the pdf files 
 ```{r facet pdf files, fig.height=6, fig.width=6}
 # Create text grobs for the labels
-label_a <- textGrob("A. Alpha diversity", x = unit(0, "npc"), just = "left", gp = gpar(fontsize = 14, fontface = "bold"))
-label_b <- textGrob("B. Beta diversity", x = unit(0, "npc"), just = "left", gp = gpar(fontsize = 14, fontface = "bold"))
-label_c <- textGrob("C. Top taxa", x = unit(0, "npc"), just = "left", gp = gpar(fontsize = 14, fontface = "bold"))
+label_a <- textGrob("A. Alpha diversity", x = unit(0, "npc"), just = "left", gp = gpar(fontsize = 18, fontface = "bold"))
+label_b <- textGrob("B. Beta diversity", x = unit(0, "npc"), just = "left", gp = gpar(fontsize = 18, fontface = "bold"))
+label_c <- textGrob("C. Top taxa", x = unit(0, "npc"), just = "left", gp = gpar(fontsize =18, fontface = "bold"))
 
 # Combine the plots with labels
 combined_plot <- gridExtra::grid.arrange(
@@ -180,9 +178,11 @@ combined_plot <- gridExtra::grid.arrange(
 )
 
 # Save the combined plot as a PDF
-ggsave("~/benchmark_demulticoder/mothur_16S_sop/figures/faceted_plots.pdf", combined_plot, width = 8, height = 18)
-ggsave("~/benchmark_demulticoder/mothur_16S_sop/figures/faceted_plots.svg", combined_plot, width = 8, height = 18)
+ggsave("~/benchmark_demulticoder/mothur_16S_sop/figures/faceted_plots.pdf", combined_plot, width = 6, height = 10)
+ggsave("~/benchmark_demulticoder/mothur_16S_sop/figures/faceted_plots.svg", combined_plot, width = 6, height = 10)
 ```
+
+
 
 ```{r}
 sessioninfo::session_info()
