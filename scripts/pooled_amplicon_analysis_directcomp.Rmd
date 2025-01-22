@@ -45,28 +45,23 @@ if (!all(stats_diversity_demulticoder$sample_name == stats_diversity_sf$sample_n
 }
 
 sample_name <- stats_diversity_sf$sample_name
-raw_demulticoder <- stats_diversity_demulticoder$raw_count
-raw_sf <- stats_diversity_sf$raw_count
-raw_count_diff <- stats_diversity_demulticoder$raw_count - stats_diversity_sf$raw_count
-richness_demulticoder <- stats_diversity_demulticoder$richness
+#raw_demulticoder <- stats_diversity_demulticoder$raw_count
+#raw_sf <- stats_diversity_sf$raw_count
+#raw_count_diff <- stats_diversity_demulticoder$raw_count - stats_diversity_sf$raw_count
 richness_sf <- stats_diversity_sf$richness
-richness_diff <- stats_diversity_demulticoder$richness - stats_diversity_sf$richness
+richness_demulticoder <- stats_diversity_demulticoder$richness
+richness_diff <- stats_diversity_sf$richness - stats_diversity_demulticoder$richness 
 shannon_demulticoder <- stats_diversity_demulticoder$shannon
 shannon_sf <- stats_diversity_sf$shannon
-shannon_diff <- stats_diversity_demulticoder$shannon - stats_diversity_sf$shannon
+shannon_diff <- stats_diversity_sf$shannon - stats_diversity_demulticoder$shannon  
 invsimpson_demulticoder <- stats_diversity_demulticoder$invsimpson
 invsimpson_sf <- stats_diversity_sf$invsimpson
-invsimpson_diff <- stats_diversity_demulticoder$invsimpson - stats_diversity_sf$invsimpson
+invsimpson_diff <- stats_diversity_sf$invsimpson - stats_diversity_demulticoder$invsimpson
 
-difference_df <- data.frame(sample_name, raw_demulticoder, raw_sf, raw_count_diff, richness_demulticoder, richness_sf, richness_diff, shannon_demulticoder, shannon_sf, shannon_diff, invsimpson_demulticoder, invsimpson_sf, invsimpson_diff)
+difference_df <- data.frame(sample_name, richness_sf, richness_demulticoder,  richness_diff, shannon_sf, shannon_demulticoder, shannon_diff, invsimpson_sf, invsimpson_demulticoder, invsimpson_diff)
 
 # save csv
 write.csv(difference_df, "demulticoder_comp_sf/results/alpha_diversity_comparison.csv", row.names = FALSE)
-
-boxplot(raw_count_diff, main = "Raw Count Differences")
-boxplot(richness_diff, main = "Richness Differences")
-boxplot(shannon_diff, main = "Shannon Differences")
-boxplot(invsimpson_diff, main = "Inverse Simpson Differences")
 
 # Let's do a paired t-test and wilcoxon test for each of the alpha diversity metrics
 # Raw count
@@ -101,8 +96,8 @@ if (!all(nmds_demulticoder$sample_name == nmds_sf$sample_name)) {
   stop("Sample names do not match between the two data frames.")
 }
 
-nmds1_diff <- nmds_demulticoder$NMDS1 - nmds_sf$NMDS1
-nmds2_diff <- nmds_demulticoder$NMDS2 - nmds_sf$NMDS2
+nmds1_diff <- - nmds_sf$NMDS1 - nmds_demulticoder$NMDS1 
+nmds2_diff <- - nmds_sf$NMDS2 - nmds_demulticoder$NMDS2 
 sample_name <- nmds_demulticoder$sample_name
 nmds1_demulticoder <- nmds_demulticoder$NMDS1
 nmds1_sf <- nmds_sf$NMDS1
@@ -111,7 +106,7 @@ nmds2_sf <- nmds_sf$NMDS2
 expected_innoc<-nmds_demulticoder$only_expected_innoc
 
 #Add to new table
-nmds_df <- data.frame(sample_name, expected_innoc,nmds1_demulticoder, nmds1_sf, nmds1_diff, nmds2_demulticoder, nmds2_sf, nmds2_diff)
+nmds_df <- data.frame(sample_name, expected_innoc, nmds1_sf, nmds1_demulticoder, nmds1_diff, nmds2_sf, nmds2_demulticoder,nmds2_diff)
 
 # save csv
 write.csv(nmds_df, "demulticoder_comp_sf/results/beta_diversity_comparison.csv", row.names = FALSE)
@@ -158,7 +153,7 @@ alpha_subplot_demulticoder <- ggplot(alpha_plot_data, aes(x = value, y = diversi
         panel.grid.major.x = element_blank(),
         panel.grid.minor = element_blank(),
         panel.grid.major.y = element_line(color = "gray"),
-        axis.text.x = element_text(angle = 45, hjust = 1, color = "black"),
+        axis.text.x = element_text(color = "black"),
         axis.text.y = element_text(color = "black"),
         axis.title.y = element_text(color = "black"),
         legend.position = "bottom",
@@ -208,7 +203,7 @@ alpha_subplot_sf <- ggplot(alpha_plot_data, aes(x = value, y = diversity)) +
         panel.grid.major.x = element_blank(),
         panel.grid.minor = element_blank(),
         panel.grid.major.y = element_line(color = "gray"),
-        axis.text.x = element_text(angle = 45, hjust = 1, color = "black"),
+        axis.text.x = element_text(color = "black"),
         axis.text.y = element_text(color = "black"),
         axis.title.y = element_text(color = "black"),
         legend.position = "bottom",
@@ -221,6 +216,7 @@ print(alpha_subplot_sf)
 
 Start with making demulticoder nmds plots
 ```{r facetted figure-beta div-demulticoder}
+set.seed(10)
 nmds_factors <- c(Flooded = 'flooded', Organism = 'organism', 'Pathogen CFU/g' = 'path_conc', 'Trial' = 'experiment')
 
 nmds_data <- nmds_demulticoder
@@ -256,8 +252,9 @@ make_one_plot <- function(factor, name) {
           legend.margin = margin(t = -0.2, unit = 'cm'),
           panel.border = element_rect(color = "black", fill = NA, size = 1)) +
     guides(color = guide_legend(nrow = 2, byrow = TRUE)) +
-    scale_x_continuous(labels = scales::number_format(accuracy = 0.1)) +  # Format x-axis labels
-    scale_y_continuous(labels = scales::number_format(accuracy = 0.1))    # Format y-axis labels
+ guides(color = guide_legend(nrow = 2, byrow = TRUE)) +
+    scale_x_continuous(breaks=c(0, 0.5, 1), labels=c(0, 0.5, 1)) +  # Adjust x-axis labels
+    scale_y_continuous(breaks=c(0, 0.5, 1), labels=c(0, 0.5, 1))    # Adjust y-axis labels
 }
 
 nmds_subplots <- map2(nmds_factors, names(nmds_factors), make_one_plot)
@@ -269,6 +266,7 @@ nmds_plot_demulticoder
 
 Start with making standard workflow nmds plots
 ```{r facetted figure-beta div-sf}
+set.seed(1)
 nmds_factors <- c(Flooded = 'flooded', Organism = 'organism', 'Pathogen CFU/g' = 'path_conc', 'Trial' = 'experiment')
 
 nmds_data <- nmds_sf
@@ -304,8 +302,8 @@ make_one_plot <- function(factor, name) {
           legend.margin = margin(t = -0.2, unit = 'cm'),
           panel.border = element_rect(color = "black", fill = NA, size = 1)) +
     guides(color = guide_legend(nrow = 2, byrow = TRUE)) +
-    scale_x_continuous(labels = scales::number_format(accuracy = 0.1)) +  # Format x-axis labels
-    scale_y_continuous(labels = scales::number_format(accuracy = 0.1))    # Format y-axis labels
+    scale_x_continuous(breaks=c(0, 0.5, 1), labels=c(0, 0.5, 1)) +  # Adjust x-axis labels
+    scale_y_continuous(breaks=c(0, 0.5, 1), labels=c(0, 0.5, 1))    # Adjust y-axis labels
 }
 
 
@@ -327,28 +325,28 @@ combined_div_plot <- plot_grid(alpha_subplot_demulticoder, alpha_subplot_sf, nmd
 
 # Adjust the layout to reduce white space and adjust margins
 combined_div_plot <- combined_div_plot + 
-  theme(plot.margin = unit(c(0.5, 0.5, 0.5, 0.5), "cm"))
+  theme(plot.margin = unit(c(0.25, 0.25, 0.25, 0.25), "cm"))
 
 # Save the plot with the specified dimensions
 ggsave(combined_div_plot, path = "demulticoder_comp_sf/figures", filename = "diversity_demulticoder_sf.pdf", 
-       width = 13.5, height = 7, bg = "#FFFFFF")
+       width = 12.5, height = 4.75, bg = "#FFFFFF")
 
 ggsave(combined_div_plot, path = "demulticoder_comp_sf/figures", filename = "diversity_demulticoder_sf.svg", 
-       width = 13.5, height =7, bg = "#FFFFFF")
+       width = 12.5, height = 4.75, bg = "#FFFFFF")
 ```
 
 ### DESEQ2-flood side-by-side
 I need to adjust the dimensions
 ```{r facetted figure-deseq}
-demulticoder_flood <- image_read_pdf("demulticoder/figures/diff_taxon_abund_flood.pdf")
-sf_flood <- image_read_pdf("standard_workflow/combined_figures/diff_taxon_abund_flood.pdf")
+demulticoder_flood <- magick::image_read_svg("demulticoder/figures/diff_taxon_abund_flood.svg")
+sf_flood <- magick::image_read_svg("standard_workflow/combined_figures/diff_taxon_abund_flood.svg")
 
 sf_grob <- rasterGrob(as.raster(sf_flood))
 demulticoder_grob <- rasterGrob(as.raster(demulticoder_flood))
 
 ### Now try saving the plot using cowplot
-combined_heat_trees <- plot_grid(demulticoder_grob, sf_grob, ncol = 2, labels = c('A.', 'B.'), 
-                                 rel_heights = c(1, 1))
+combined_heat_trees <- cowplot::plot_grid(demulticoder_grob, sf_grob, ncol = 2, labels = c('A.', 'B.'), 
+                                 rel_heights = c(1, 1), align = "v")
 
 # Adjust the layout to reduce white space and adjust margins
 combined_heat_trees <- combined_heat_trees + 
@@ -356,27 +354,23 @@ combined_heat_trees <- combined_heat_trees +
 
 # Save the plot with the specified dimensions
 ggsave(combined_heat_trees, path = "demulticoder_comp_sf/figures", filename = "combined_heat_trees_deseq2_flood.pdf", 
-       width = 7, height = 4.5, bg = "#FFFFFF")
+       width =7, height = 4, bg = "#FFFFFF")
 
 ggsave(combined_heat_trees, path = "demulticoder_comp_sf/figures", filename = "combined_heat_trees_deseq2_flood.svg", 
-       width = 7, height = 4.5, bg = "#FFFFFF")
+       width =7, height = 4, bg = "#FFFFFF")
 ```
 
-### DESEQ2-flood-flood-difference_comparison
-```{r facet figure-deseq continued}
-#In progress
-```
 
 ### Heat trees of most abundant taxa-side-by-side comparison
 ```{r facet figure-most abundant taxa}
-demulticoder_flood <- image_read_pdf("demulticoder/figures/heattree_mostabund_taxa.pdf")
-sf_flood <- image_read_pdf("standard_workflow/combined_figures/heattree_mostabund_taxa.pdf")
+demulticoder_abund <- magick::image_read_svg("demulticoder/figures/heattree_mostabund_taxa.svg")
+sf_abund <- magick::image_read_svg("standard_workflow/combined_figures/heattree_mostabund_taxa.svg")
 
-sf_grob <- rasterGrob(as.raster(sf_flood))
-demulticoder_grob <- rasterGrob(as.raster(demulticoder_flood))
+sf_grob <- rasterGrob(as.raster(sf_abund))
+demulticoder_grob <- rasterGrob(as.raster(demulticoder_abund))
 
 ### Now try saving the plot using cowplot
-combined_heat_trees <- plot_grid(demulticoder_grob, sf_grob, ncol = 2, labels = c('A.', 'B.'), 
+combined_heat_trees <- cowplot::plot_grid(demulticoder_grob, sf_grob, ncol = 2, labels = c('A.', 'B.'), 
                                  rel_heights = c(1, 1), align = "v")
 
 # Adjust the layout to reduce white space and adjust margins
@@ -385,15 +379,10 @@ combined_heat_trees <- combined_heat_trees +
 
 # Save the plot with the specified dimensions
 ggsave(combined_heat_trees, path = "demulticoder_comp_sf/figures", filename = "mostabund_taxa_combined.pdf", 
-       width =7, height = 4.5, bg = "#FFFFFF")
+       width =7, height = 4, bg = "#FFFFFF")
 
 ggsave(combined_heat_trees, path = "demulticoder_comp_sf/figures", filename = "mostabund_taxa_combined.svg", 
-       width =7, height = 4.5, bg = "#FFFFFF")
-```
-
-### Heat trees of most abundant taxa-side-by-side comparison
-```{r most abundant taxa cont}
-#Alt approach in progress
+       width =7, height = 4, bg = "#FFFFFF")
 ```
 
 ```{r session info}

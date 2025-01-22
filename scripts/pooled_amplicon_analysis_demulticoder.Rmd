@@ -27,13 +27,13 @@ library(vegan); packageVersion("vegan")
 library(grid)
 library(gridExtra)
 knitr::opts_knit$set(root.dir = "~/benchmark_demulticoder")
+
+seed <- 1
+set.seed(seed)
 ```
 
 ### Load outputs from the demulticoder workflow
 ```{r prepare reads}
-seed <- 1
-set.seed(seed)
-
 asv_matrix_rps10<-read.csv("demulticoder/data/final_asv_abundance_matrix_rps10.csv")
 asv_matrix_rps10$dada2_tax <- asv_matrix_rps10$dada2_tax <- gsub("Stramenopila", "Eukaryota--100--Domain;Stramenopila", asv_matrix_rps10$dada2_tax)
 asv_matrix_rps10 <- asv_matrix_rps10[, -1]
@@ -176,7 +176,7 @@ First we will configure the combined taxmap object
 ```{r make taxmap object, fig.height=10, fig.width=6, message=FALSE}
 #load reference database
 rps10_database <- read_fasta("demulticoder/data/rps10_reference_db.fa")
-innoc_species <- c(Cin = "Phytophthora_cinnamomi",  Plu = "Phytophthora_plurivora", Cry = "Pythium_cryptoirregulare")
+innoc_species <- c(Cin = "Phytophthora_cinnamomi",  Plu = "Phytophthora_plurivora", Cry = "Globisporangium_cryptoirregulare")
 innoc_regex <- paste0('(', paste0(innoc_species, collapse = '|'), ')')
 innoc_seqs <- rps10_database[grepl(names(rps10_database), pattern = innoc_regex)]
 innoc_seqs <- innoc_seqs[! duplicated(innoc_seqs)]
@@ -235,7 +235,7 @@ abundance <- mutate(abundance, is_inoculum = sequence %in% infection_data$asv_se
 write_csv(abundance, file.path('demulticoder/data', 'abundance_with_infection_data.csv'))
 
 #Let's append metadata table with more info
-species_name_key <- c(Phytophthora_cinnamomi = "cin_prop", Phytophthora_plurivora = "plu_prop", Pythium_cryptoirregulare = "cry_prop")
+species_name_key <- c(Phytophthora_cinnamomi = "cin_prop", Phytophthora_plurivora = "plu_prop", Globisporangium_cryptoirregulare = "cry_prop")
 sample_infection_data <- infection_data %>%
   group_by(species) %>% summarise_at(metadata$sample_name, sum) %>% # Sum per inoculum species
   gather(key = "sample_name", value = "read_prop", !!! metadata$sample_name) %>%
@@ -308,7 +308,7 @@ write_csv(metadata, file.path('demulticoder/data', 'metadata_with_infection_data
 ### For the sample data, I will add columns for the proportion of reads in each sample representing each inoculum as well as a columns that indicate whether the expected inoculum was found, and if so, if it was the only inoculum found.
 ```{r prep metadata}
 # Get per-sample proportions of reads
-species_name_key <- c(Phytophthora_cinnamomi = "cin_prop", Phytophthora_plurivora = "plu_prop", Pythium_cryptoirregulare = "cry_prop")
+species_name_key <- c(Phytophthora_cinnamomi = "cin_prop", Phytophthora_plurivora = "plu_prop", Globisporangium_cryptoirregulare = "cry_prop")
 sample_infection_data <- infection_data %>%
   group_by(species) %>% summarise_at(metadata$sample_name, sum) %>% # Sum per inoculum species
   tidyr::gather(key = "sample_name", value = "read_prop", !!! metadata$sample_name) %>%
@@ -491,7 +491,10 @@ nmds_plot_data <- function(prob_table) {
 }
 
 nmds_data <- nmds_plot_data(prob_table[! is.na(metadata$organism) & metadata$valid_inoc])
+
 #nmds_data <- nmds_plot_data(prob_table)
+
+#nmds_data$NMDS2 <- -nmds_data$NMDS2
 
 nmds_factors <- c(Flooded = 'flooded', Organism = 'organism', 'Pathogen CFU/g' = 'path_conc', 'Trial' = 'experiment')
 
@@ -679,24 +682,11 @@ significant_taxon_ids <- unique(
 range(obj_subset$data$diff_table_flood$padj, finite = TRUE) 
 range(obj_subset$data$diff_table_flood$log2FoldChange, finite = TRUE) 
 
-# add associated taxonoimc assignments before exporting table data16S_nowf_separate <- data16S_nowf %>% 
-  group_by(Treatuntreat_EP, Kingdom, Phylum) %>% 
-  summarise(Abundance = sum(Abundance), Prevalence = n_distinct(Sample)) %>% 
-  ungroup() %>% 
-  group_by(Treatuntreat_EP) %>% 
-  mutate(Total_Abundance = sum(Abundance)) %>% 
-  ungroup() %>% 
-  mutate(Prop = Abundance / Total_Abundance)
-
-data16S_nowf_separate_filt <- data16S_nowf_separate %>%
-  filter(Prop > 0.01)
-
-write.csv(obj_subset$data$diff_table_flood[obj_subset$data$diff_table_flood$padj < 0.05,], file = "demulticoder/results/diff_table_flood.csv")
-
 set.seed = 1000
 obj_subset %>%
   filter_taxa(taxon_ids %in% significant_taxon_ids, supertaxa = TRUE, reassign_obs = FALSE) %>%
   filter_taxa(! grepl(x = taxon_names, "_sp$"), reassign_obs = FALSE) %>%
+  filter_taxa(! grepl(x = taxon_names, "NA", ignore.case = TRUE), reassign_obs = FALSE) %>%
   filter_taxa(! grepl(x = taxon_names, "incertae_sedis", ignore.case = TRUE), reassign_obs = FALSE) %>%
   remove_redundant_names() %>%
   heat_tree_matrix(data = "diff_table_flood",
@@ -704,15 +694,15 @@ obj_subset %>%
             node_size = tax_prop,
             node_color = ifelse(is.na(padj) | padj > 0.05, 0, log2FoldChange), # difference between groups
             node_color_trans = "linear",
-            node_color_interval = c(-5.2, 5.2),
-            edge_color_interval = c(-5.2, 5.2),
+            node_color_interval = c(-5, 5),
+            edge_color_interval = c(-5, 5),
             node_size_range = c(.005, .03),
             node_size_trans = "log2",
             node_label_size_range = c(.015, .02),
             node_color_range = diverging_palette(),
             node_size_axis_label = "Mean read proportion",
             node_color_axis_label = "Log fold change",
-            output_file = file.path('demulticoder/figures', 'diff_taxon_abund_flood.pdf'))
+            output_file = file.path('demulticoder/figures', 'diff_taxon_abund_flood.svg'))
 ```
 
 ### Let's make differential abundance plots for our combined dataset-first let's look at diff. abundance of taxa by inoculum source
@@ -891,7 +881,7 @@ obj_subset %>%
             edge_color_digits = 2,
             edge_size_digits = 2,
             #aspect_ratio = 1.618,
-            output_file = file.path('demulticoder/figures', '/heattree_mostabund_taxa.pdf'))
+            output_file = file.path('demulticoder/figures', '/heattree_mostabund_taxa.svg'))
 ```
 
 ### Reload ASV matrices and metadata for final checks when examining new db to the old version before updates
@@ -1031,7 +1021,7 @@ obj_newdb %>%
             edge_color_digits = 2,
             edge_size_digits = 2,
             #aspect_ratio = 1.618,
-            output_file = file.path('demulticoder/figures', '/heattree_mostabund_taxa_rps10_newdb_boot0_greater1.pdf'))
+            output_file = file.path('demulticoder/figures', '/heattree_mostabund_taxa_rps10_newdb_boot0_greater1.svg'))
 ```
 
 ### Community composition plot-old db-showcase differences in bootstrap support values
@@ -1098,7 +1088,7 @@ obj_olddb %>%
             edge_color_digits = 2,
             edge_size_digits = 2,
             #aspect_ratio = 1.618,
-            output_file = file.path('demulticoder/figures', '/heattree_mostabund_taxa_rps10_olddb_boot0_greater1.pdf'))
+            output_file = file.path('demulticoder/figures', '/heattree_mostabund_taxa_rps10_olddb_boot0_greater1.svg'))
 ```
 
 Let's facet the two plots so we have a side-by-side comparison of the two databases. 

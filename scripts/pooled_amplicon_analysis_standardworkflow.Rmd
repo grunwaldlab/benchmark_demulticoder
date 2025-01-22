@@ -315,7 +315,7 @@ First we will configure the combined taxmap object
 ```{r make taxmap object, fig.height=10, fig.width=6, message=FALSE}
 #load reference database
 rps10_database <- read_fasta("demulticoder/data/rps10_reference_db.fa")
-innoc_species <- c(Cin = "Phytophthora_cinnamomi",  Plu = "Phytophthora_plurivora", Cry = "Pythium_cryptoirregulare")
+innoc_species <- c(Cin = "Phytophthora_cinnamomi",  Plu = "Phytophthora_plurivora", Cry = "Globisporangium_cryptoirregulare")
 innoc_regex <- paste0('(', paste0(innoc_species, collapse = '|'), ')')
 innoc_seqs <- rps10_database[grepl(names(rps10_database), pattern = innoc_regex)]
 innoc_seqs <- innoc_seqs[! duplicated(innoc_seqs)]
@@ -375,7 +375,7 @@ abundance <- mutate(abundance, is_inoculum = sequence %in% infection_data$asv_se
 write_csv(abundance, file.path('standard_workflow/combined_data', 'abundance_with_infection_data.csv'))
 
 #Let's append metadata table with more info
-species_name_key <- c(Phytophthora_cinnamomi = "cin_prop", Phytophthora_plurivora = "plu_prop", Pythium_cryptoirregulare = "cry_prop")
+species_name_key <- c(Phytophthora_cinnamomi = "cin_prop", Phytophthora_plurivora = "plu_prop", Globisporangium_cryptoirregulare = "cry_prop")
 sample_infection_data <- infection_data %>%
   group_by(species) %>% summarise_at(metadata$sample_name, sum) %>% # Sum per inoculum species
   gather(key = "sample_name", value = "read_prop", !!! metadata$sample_name) %>%
@@ -397,6 +397,7 @@ metadata$expected_innoc_prop <- map_dbl(1:nrow(metadata), function(i) {
     return(metadata[[i, prop_col]])
   }
 })
+
 metadata$unexpected_innoc_prop <- map_dbl(1:nrow(metadata), function(i) {
   prop_cols <- c("cin_prop", "cry_prop", "plu_prop")
   if (metadata$sample_type[i] == "Mock community"  || metadata$sample_type[i] == "Negative control" || metadata$organism[i] == "Control") {
@@ -445,10 +446,10 @@ map_dbl(split(metadata$valid_inoc, metadata$organism), sum)
 write_csv(metadata, file.path('standard_workflow/combined_data', 'metadata_with_infection_data.csv'))
 ```
 
-### For the sample data, we add columns for the proportion of reads in each sample representing each inoculum as well as a columns that indicate whether the expected inoculum was found, and if so, if it was the only inoculum found.
+### For the sample data, I will add columns for the proportion of reads in each sample representing each inoculum as well as a columns that indicate whether the expected inoculum was found, and if so, if it was the only inoculum found.
 ```{r}
 # Get per-sample proportions of reads
-species_name_key <- c(Phytophthora_cinnamomi = "cin_prop", Phytophthora_plurivora = "plu_prop", Pythium_cryptoirregulare = "cry_prop")
+species_name_key <- c(Phytophthora_cinnamomi = "cin_prop", Phytophthora_plurivora = "plu_prop", Globisporangium_cryptoirregulare = "cry_prop")
 sample_infection_data <- infection_data %>%
   group_by(species) %>% summarise_at(metadata$sample_name, sum) %>% # Sum per inoculum species
   tidyr::gather(key = "sample_name", value = "read_prop", !!! metadata$sample_name) %>%
@@ -517,6 +518,7 @@ map_dbl(split(metadata$valid_inoc, metadata$organism), sum)
 # Save new metadata
 write_csv(metadata, file.path('standard_workflow/combined_data', 'metadata_with_infection_data.csv'))
 ```
+
 
 ### Let's convert our new matrix and associated metadata table to a taxmap object
 ```{r}
@@ -630,10 +632,12 @@ nmds_plot_data <- function(prob_table) {
 }
 
 nmds_data <- nmds_plot_data(prob_table[! is.na(metadata$organism) & metadata$valid_inoc])
-#nmds_data <- nmds_plot_data(prob_table)
-#Results are arbitrarily mirrored compared to my demulticoder analyses, so I will fix this here, without changing hte meaning
 
-nmds_data$NMDS2 <- -nmds_data$NMDS2
+#nmds_data <- nmds_plot_data(prob_table)
+
+#Results are arbitrarily mirrored compared to my demulticoder analyses, so I will fix this here, without changing the meaning
+
+#nmds_data$NMDS2 <- -nmds_data$NMDS2
 
 nmds_factors <- c(Flooded = 'flooded', Organism = 'organism', 'Pathogen CFU/g' = 'path_conc', 'Trial' = 'experiment')
 
@@ -812,10 +816,9 @@ obj_subset <- filter_taxa(obj_subset, max_boot[taxon_ids] >= min_bootstrap | tax
 
 ### Let's make differential abundance plots for our combined dataset-first let's look at diff. abundance of taxa by whether plots were flooded or not
 ```{r abundance plots-flood, message=FALSE, echo=FALSE}
-# Rename metadata$flooded values from TRUE FALSE to Flooded Not Flooded
+# Calculate difference between groups
 metadata$flooded <- ifelse(metadata$flooded == TRUE, "Flooded", "Not Flooded")
 
-# Calculate difference between groups
 obj_subset$data$diff_table_flood <- calc_diff_abund_deseq2(obj_subset, data = "tax_abund",
                                                            cols = metadata$sample_name[!is.na(metadata$flooded)],
                                                            groups = metadata$flooded[!is.na(metadata$flooded)])
@@ -826,31 +829,28 @@ significant_taxon_ids <- unique(
 range(obj_subset$data$diff_table_flood$padj, finite = TRUE) 
 range(obj_subset$data$diff_table_flood$log2FoldChange, finite = TRUE) 
 
-# export diff_table_flood of only the significant taxa
-write.csv(obj_subset$data$diff_table_flood[obj_subset$data$diff_table_flood$padj < 0.05,], file = "standard_workflow/cobined_results/diff_table_flood.csv")
-
-
 set.seed = 1000
 obj_subset %>%
   filter_taxa(taxon_ids %in% significant_taxon_ids, supertaxa = TRUE, reassign_obs = FALSE) %>%
   filter_taxa(! grepl(x = taxon_names, "_sp$"), reassign_obs = FALSE) %>%
-  filter_taxa(! grepl(x = taxon_names, "incertae_sedis", ignore.case = TRUE), reassign_obs = FALSE) %>%
+  filter_taxa(! grepl(x = taxon_names, "incertae_sedis", ignore.case = TRUE),
+              reassign_obs = FALSE) %>%
   filter_taxa(! grepl(x = taxon_names, "NA", ignore.case = TRUE), reassign_obs = FALSE) %>%
   remove_redundant_names() %>%
-   heat_tree_matrix(data = "diff_table_flood",
+  heat_tree_matrix(data = "diff_table_flood",
             node_label = taxon_names,
             node_size = tax_prop,
             node_color = ifelse(is.na(padj) | padj > 0.05, 0, log2FoldChange), # difference between groups
             node_color_trans = "linear",
-            node_color_interval = c(-6.5, 6.5),
-            edge_color_interval = c(-6.5, 6.5),
+            node_color_interval = c(-5, 5),
+            edge_color_interval = c(-5, 5),
             node_size_range = c(.005, .03),
             node_size_trans = "log2",
             node_label_size_range = c(.015, .02),
             node_color_range = diverging_palette(),
             node_size_axis_label = "Mean read proportion",
-            node_color_axis_label = "Log2 fold change",
-            output_file = file.path('standard_workflow/combined_figures', 'diff_taxon_abund_flood.pdf'))
+            node_color_axis_label = "Log fold change",
+            output_file = file.path('standard_workflow/combined_figures', 'diff_taxon_abund_flood.svg'))
 ```
 
 ### Let's make differential abundance plots for our combined dataset-first let's look at diff. abundance of taxa by inoculum source
@@ -1032,7 +1032,7 @@ obj_subset %>%
             edge_color_digits = 2,
             edge_size_digits = 2,
             #aspect_ratio = 1.618,
-            output_file = file.path('standard_workflow/combined_figures', '/heattree_mostabund_taxa.pdf'))
+            output_file = file.path('standard_workflow/combined_figures', '/heattree_mostabund_taxa.svg'))
 ```
 
 ```{r session info}
