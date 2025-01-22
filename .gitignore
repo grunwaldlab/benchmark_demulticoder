@@ -9,3 +9,5 @@ mothur_16S_sop/data/filtered*
 mothur_16S_sop/outputs_demulticoder
 mothur_16S_sop/outputs_standardworkflow
 mothur_16S_sop/data/prefiltered*
+manuscript_figs_tables
+rps10_cox1_phylogeny

@@ -338,8 +338,8 @@ ggsave(combined_div_plot, path = "demulticoder_comp_sf/figures", filename = "div
 ### DESEQ2-flood side-by-side
 I need to adjust the dimensions
 ```{r facetted figure-deseq}
-demulticoder_flood <- magick::image_read_svg("demulticoder/figures/diff_taxon_abund_flood.svg")
-sf_flood <- magick::image_read_svg("standard_workflow/combined_figures/diff_taxon_abund_flood.svg")
+demulticoder_flood <- magick::image_read_pdf("demulticoder/figures/diff_taxon_abund_flood.pdf")
+sf_flood <- magick::image_read_pdf("standard_workflow/combined_figures/diff_taxon_abund_flood.pdf")
 
 sf_grob <- rasterGrob(as.raster(sf_flood))
 demulticoder_grob <- rasterGrob(as.raster(demulticoder_flood))
@@ -363,8 +363,8 @@ ggsave(combined_heat_trees, path = "demulticoder_comp_sf/figures", filename = "c
 
 ### Heat trees of most abundant taxa-side-by-side comparison
 ```{r facet figure-most abundant taxa}
-demulticoder_abund <- magick::image_read_svg("demulticoder/figures/heattree_mostabund_taxa.svg")
-sf_abund <- magick::image_read_svg("standard_workflow/combined_figures/heattree_mostabund_taxa.svg")
+demulticoder_abund <- magick::image_read_pdf("demulticoder/figures/heattree_mostabund_taxa.pdf")
+sf_abund <- magick::image_read_pdf("standard_workflow/combined_figures/heattree_mostabund_taxa.pdf")
 
 sf_grob <- rasterGrob(as.raster(sf_abund))
 demulticoder_grob <- rasterGrob(as.raster(demulticoder_abund))
