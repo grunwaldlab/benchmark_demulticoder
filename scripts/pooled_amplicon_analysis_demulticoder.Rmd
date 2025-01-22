@@ -1108,7 +1108,7 @@ combined_heat_trees <- combined_heat_trees +
   theme(plot.margin = unit(c(0.5, 0.5, 0.5, 0.5), "cm"))
 
 # Save the plot with the specified dimensions
-ggsave(combined_heat_trees, path = "demulticoder/figures", filename = "combined_heat_trees_db_compare_0boot.pdf", 
+ggsave(combined_heat_trees, path = "demulticoder/figures", filename = "combined_heat_trees_db_compare_60boot.pdf", 
        width = 7, height = 4.5, bg = "#FFFFFF")
 
 ggsave(combined_heat_trees, path = "demulticoder/figures", filename = "combined_heat_trees_db_compare_0boot.svg", 

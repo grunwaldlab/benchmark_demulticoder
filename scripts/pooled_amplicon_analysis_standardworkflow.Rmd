@@ -637,7 +637,7 @@ nmds_data <- nmds_plot_data(prob_table[! is.na(metadata$organism) & metadata$val
 
 #Results are arbitrarily mirrored compared to my demulticoder analyses, so I will fix this here, without changing the meaning
 
-#nmds_data$NMDS2 <- -nmds_data$NMDS2
+nmds_data$NMDS2 <- -nmds_data$NMDS2
 
 nmds_factors <- c(Flooded = 'flooded', Organism = 'organism', 'Pathogen CFU/g' = 'path_conc', 'Trial' = 'experiment')
 

@@ -50,13 +50,13 @@ sample_name <- stats_diversity_sf$sample_name
 #raw_count_diff <- stats_diversity_demulticoder$raw_count - stats_diversity_sf$raw_count
 richness_sf <- stats_diversity_sf$richness
 richness_demulticoder <- stats_diversity_demulticoder$richness
-richness_diff <- stats_diversity_sf$richness - stats_diversity_demulticoder$richness 
+richness_diff <- abs(stats_diversity_sf$richness - stats_diversity_demulticoder$richness) 
 shannon_demulticoder <- stats_diversity_demulticoder$shannon
 shannon_sf <- stats_diversity_sf$shannon
-shannon_diff <- stats_diversity_sf$shannon - stats_diversity_demulticoder$shannon  
+shannon_diff <- abs(stats_diversity_sf$shannon - stats_diversity_demulticoder$shanno)  
 invsimpson_demulticoder <- stats_diversity_demulticoder$invsimpson
 invsimpson_sf <- stats_diversity_sf$invsimpson
-invsimpson_diff <- stats_diversity_sf$invsimpson - stats_diversity_demulticoder$invsimpson
+invsimpson_diff <- abs(stats_diversity_sf$invsimpson - stats_diversity_demulticoder$invsimpson)
 
 difference_df <- data.frame(sample_name, richness_sf, richness_demulticoder,  richness_diff, shannon_sf, shannon_demulticoder, shannon_diff, invsimpson_sf, invsimpson_demulticoder, invsimpson_diff)
 
@@ -96,8 +96,8 @@ if (!all(nmds_demulticoder$sample_name == nmds_sf$sample_name)) {
   stop("Sample names do not match between the two data frames.")
 }
 
-nmds1_diff <- - nmds_sf$NMDS1 - nmds_demulticoder$NMDS1 
-nmds2_diff <- - nmds_sf$NMDS2 - nmds_demulticoder$NMDS2 
+nmds1_diff <- abs(nmds_sf$NMDS1 - nmds_demulticoder$NMDS1)
+nmds2_diff <- abs(nmds_sf$NMDS2 - nmds_demulticoder$NMDS2)
 sample_name <- nmds_demulticoder$sample_name
 nmds1_demulticoder <- nmds_demulticoder$NMDS1
 nmds1_sf <- nmds_sf$NMDS1
