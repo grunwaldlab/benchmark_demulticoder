@@ -2,6 +2,7 @@
 .Rhistory
 .RData
 .Ruserdata
+demulticoder/data/*.fastq.gz
 mothur_16S_sop/data/*.fastq.gz
 mothur_16S_sop/data/silva*
 mothur_16S_sop/temp

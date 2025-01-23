@@ -100,6 +100,12 @@ seqtab.nochim <- removeBimeraDenovo(seqtab, method="consensus", multithread=TRUE
 dim(seqtab.nochim)
 
 sum(seqtab.nochim)/sum(seqtab)
+
+#save table
+table(nchar(getSequences(seqtab.nochim)))
+sample_prefixes <- stringr::str_remove(rownames(seqtab.nochim), "_R1\\.fastq\\.gz$")
+rownames(seqtab.nochim) <- sample_prefixes
+write.table(seqtab.nochim, file="outputs_standardworkflow/r16S_seqtab_nochim.out",sep="\t",quote=F)
 ```
 
 ### Track reads through pipeline
@@ -110,7 +116,6 @@ track <- cbind(out, sapply(dadaFs, getN), sapply(dadaRs, getN), sapply(mergers, 
 colnames(track) <- c("input", "filtered", "denoisedF", "denoisedR", "merged", "nonchim")
 rownames(track) <- sample.names
 head(track)
-
 taxa.print <- track  # Removing sequence rownames for display only
 rownames(taxa.print) <- NULL
 
@@ -125,6 +130,8 @@ taxa <- addSpecies(taxa, "data/silva_v138.2_assignSpecies.fa.gz")
 taxa.print <- taxa # Removing sequence rownames for display only
 rownames(taxa.print) <- NULL
 head(taxa.print)
+
+write.table(taxa, file="outputs_standardworkflow/r16S_taxa_standardwf.out",sep="\t",quote=F)
 ```
 
 ### Evaluate accuracy

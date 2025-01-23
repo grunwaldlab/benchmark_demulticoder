@@ -78,7 +78,7 @@ knitr::kable(primer_info, row.names = FALSE)
 ```{r prepare reads, fig.height=6, fig.width=6}
 outputs<-prepare_reads(
   data_directory = "~/benchmark_demulticoder/mothur_16S_sop/data", 
-  output_directory = "~/benchmark_demulticoder/mothur_16S_sop/outputs",
+  output_directory = "~/benchmark_demulticoder/mothur_16S_sop/outputs_demulticoder",
   tempdir_path = "~/benchmark_demulticoder/mothur_16S_sop/temp",
   tempdir_id = "SOP_run",
   overwrite_existing = FALSE)
