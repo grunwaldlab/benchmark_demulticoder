@@ -18,9 +18,9 @@ library(parallel); packageVersion("parallel")
 set.seed(1)
 ```
 
-### The DADA2 workflow is similar to what is described in the rps10 tutorial in DADA2 documentation, but since amplicons were pooled, I needed to first demultiplex rps10 reads within samples, or else rps10 reads will still be included in all downstream steps
+## The DADA2 workflow is similar to what is described in the rps10 tutorial in DADA2 documentation, but since amplicons were pooled, I needed to first demultiplex rps10 reads within samples, or else rps10 reads will still be included in all downstream steps.    
 
-Remove Ns from any reads before beginning DADA2 workflow. I did this for the rps10 analysis (which I ran first) so I'll just reference these filtered reads
+### Remove Ns from any reads before beginning DADA2 workflow. I did this for the rps10 analysis (which I ran first) so I'll just reference these filtered reads
 ```{r remove Ns}
 path1 <- "~/demulticoder_benchmarking/demulticoder_combined_analysis_rhode/data"
 path <- "~/demulticoder_benchmarking/rhode_DADA2_workflow/data/reads"

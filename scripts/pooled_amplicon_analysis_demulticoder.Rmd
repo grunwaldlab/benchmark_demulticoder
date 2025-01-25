@@ -1,9 +1,7 @@
 ---
 title: "Pooled amplicon analysis-demulticoder"
-output:
-  html_document: default
-  pdf_document: default
-date: "2024-12-24"
+output: html_document
+date: "2024-05-21"
 ---
 
 ```{r setup}
@@ -27,20 +25,20 @@ library(vegan); packageVersion("vegan")
 library(grid)
 library(gridExtra)
 knitr::opts_knit$set(root.dir = "~/benchmark_demulticoder")
-
-seed <- 1
-set.seed(seed)
 ```
 
 ### Load outputs from the demulticoder workflow
 ```{r prepare reads}
+seed <- 1
+set.seed(seed)
+
 asv_matrix_rps10<-read.csv("demulticoder/data/final_asv_abundance_matrix_rps10.csv")
 asv_matrix_rps10$dada2_tax <- asv_matrix_rps10$dada2_tax <- gsub("Stramenopila", "Eukaryota--100--Domain;Stramenopila", asv_matrix_rps10$dada2_tax)
 asv_matrix_rps10 <- asv_matrix_rps10[, -1]
 colnames(asv_matrix_rps10)[3:ncol(asv_matrix_rps10)] <- gsub("_rps10$", "", colnames(asv_matrix_rps10)[3:ncol(asv_matrix_rps10)])
 
 asv_matrix_its<-read.csv("demulticoder/data/final_asv_abundance_matrix_its.csv")
-asv_matrix_its$dada2_tax <- gsub("Fungi--", "Eukaryota--100--Domain;Fungi--", asv_matrix_its$dada2_tax)
+asv_matrix_its$dada2_tax <- gsub("Fungi", "Eukaryota--100--Domain;Fungi", asv_matrix_its$dada2_tax)
 asv_matrix_its <- asv_matrix_its[, -1]
 colnames(asv_matrix_its)[3:ncol(asv_matrix_rps10)] <- gsub("_its$", "", colnames(asv_matrix_its)[3:ncol(asv_matrix_its)])
 
@@ -176,7 +174,7 @@ First we will configure the combined taxmap object
 ```{r make taxmap object, fig.height=10, fig.width=6, message=FALSE}
 #load reference database
 rps10_database <- read_fasta("demulticoder/data/rps10_reference_db.fa")
-innoc_species <- c(Cin = "Phytophthora_cinnamomi",  Plu = "Phytophthora_plurivora", Cry = "Globisporangium_cryptoirregulare")
+innoc_species <- c(Cin = "Phytophthora_cinnamomi",  Plu = "Phytophthora_plurivora", Cry = "Pythium_cryptoirregulare")
 innoc_regex <- paste0('(', paste0(innoc_species, collapse = '|'), ')')
 innoc_seqs <- rps10_database[grepl(names(rps10_database), pattern = innoc_regex)]
 innoc_seqs <- innoc_seqs[! duplicated(innoc_seqs)]
@@ -235,7 +233,7 @@ abundance <- mutate(abundance, is_inoculum = sequence %in% infection_data$asv_se
 write_csv(abundance, file.path('demulticoder/data', 'abundance_with_infection_data.csv'))
 
 #Let's append metadata table with more info
-species_name_key <- c(Phytophthora_cinnamomi = "cin_prop", Phytophthora_plurivora = "plu_prop", Globisporangium_cryptoirregulare = "cry_prop")
+species_name_key <- c(Phytophthora_cinnamomi = "cin_prop", Phytophthora_plurivora = "plu_prop", Pythium_cryptoirregulare = "cry_prop")
 sample_infection_data <- infection_data %>%
   group_by(species) %>% summarise_at(metadata$sample_name, sum) %>% # Sum per inoculum species
   gather(key = "sample_name", value = "read_prop", !!! metadata$sample_name) %>%
@@ -306,9 +304,9 @@ write_csv(metadata, file.path('demulticoder/data', 'metadata_with_infection_data
 ```
 
 ### For the sample data, I will add columns for the proportion of reads in each sample representing each inoculum as well as a columns that indicate whether the expected inoculum was found, and if so, if it was the only inoculum found.
-```{r prep metadata}
+```{r}
 # Get per-sample proportions of reads
-species_name_key <- c(Phytophthora_cinnamomi = "cin_prop", Phytophthora_plurivora = "plu_prop", Globisporangium_cryptoirregulare = "cry_prop")
+species_name_key <- c(Phytophthora_cinnamomi = "cin_prop", Phytophthora_plurivora = "plu_prop", Pythium_cryptoirregulare = "cry_prop")
 sample_infection_data <- infection_data %>%
   group_by(species) %>% summarise_at(metadata$sample_name, sum) %>% # Sum per inoculum species
   tidyr::gather(key = "sample_name", value = "read_prop", !!! metadata$sample_name) %>%
@@ -379,7 +377,7 @@ write_csv(metadata, file.path('demulticoder/data', 'metadata_with_infection_data
 ```
 
 ### Let's convert our new matrix and associated metadata table to a taxmap object
-```{r convert to taxmap}
+```{r}
 metadata <- filter(metadata, ! is_ambiguous)
 abundance <- filter(abundance, ! is_inoculum)
 
@@ -471,12 +469,13 @@ alpha_subplot <- ggplot(alpha_plot_data, aes(x = value, y = diversity)) +
         panel.grid.minor = element_blank(),
         axis.text.x = element_text(angle = 45, hjust = 1),
         legend.position="bottom")
+
+alpha_subplot
 ```
 
 
 ## Beta diversity
 ```{r beta diversity}
-library(cowplot)
 set.seed(1)
 prob_table <- obj$data$prop[metadata$sample_name]
 nmds_plot_data <- function(prob_table) {
@@ -492,10 +491,6 @@ nmds_plot_data <- function(prob_table) {
 
 nmds_data <- nmds_plot_data(prob_table[! is.na(metadata$organism) & metadata$valid_inoc])
 
-#nmds_data <- nmds_plot_data(prob_table)
-
-#nmds_data$NMDS2 <- -nmds_data$NMDS2
-
 nmds_factors <- c(Flooded = 'flooded', Organism = 'organism', 'Pathogen CFU/g' = 'path_conc', 'Trial' = 'experiment')
 
 make_one_plot <- function(factor, name) {
@@ -505,21 +500,23 @@ make_one_plot <- function(factor, name) {
            NMDS2 = scales::rescale(NMDS2)) %>%
     mutate(factor = fct_relevel(ordered(factor), "Control", "Cin", "Plu", "Cry")) %>%
     ggplot(aes_string(x = "NMDS1", y = "NMDS2", color = "factor", label = "sample_name")) +
+    # geom_label(size = 2) +
     geom_point() +
     coord_fixed() +
     viridis::scale_color_viridis(discrete = TRUE, end = .9) +
-    labs(color = NULL, x = "NMDS1", y = "NMDS2") +
+    labs(color = NULL, x = NULL, y = NULL) +
     theme(panel.grid.major = element_blank(),
           panel.grid.minor = element_blank(),
-          axis.text = element_text(size = 10),
-          axis.title = element_text(size = 12),
-          axis.ticks = element_line(color = "black"),
+          axis.text = element_blank(),
+          axis.title = element_text(size = 7), 
+          axis.ticks = element_blank(),
           plot.margin = unit(rep(0.04, 4), "cm"),
+          # panel.background = element_rect(fill = 'transparent', colour = NA),
+          # plot.background = element_rect(fill = "white", colour = NA),
           legend.position = "bottom",
           legend.text = element_text(size = 10),
           legend.key.height = unit(0.5, 'cm'),
           legend.key.width = unit(0.2, 'cm'))
-  
 }
 
 nmds_subplots <- map2(nmds_factors, names(nmds_factors), make_one_plot)
@@ -530,18 +527,15 @@ ggsave(nmds_plot, path = "demulticoder/figures", filename = "nmds.pdf",
        width = 7, height = 8)
 print(nmds_plot)
 
-combined_div_plot <- plot_grid(alpha_subplot, nmds_plot, ncol = 1, labels = c('A', 'B'),
-                               rel_heights = c(1, 0.9))
+combined_div_plot <- ggpubr::ggarrange(alpha_subplot, nmds_plot, ncol = 1, labels = c('A', 'B'),
+                               heights = c(1, 1))
 combined_div_plot
 
 ggsave(combined_div_plot, path = "demulticoder/figures", filename = "diversity.pdf", 
-       width = 13, height = 8, bg = "#FFFFFF")
+       width = 10, height = 6, bg = "#FFFFFF")
 
 ggsave(combined_div_plot, path = "demulticoder/figures", filename = "diversity.svg", 
-       width = 13, height = 8, bg = "#FFFFFF")
-
-### Export coordinates
-write.csv(nmds_data, file.path("demulticoder", "results/compiled_stats.csv"))
+       width = 10, height = 6, bg = "#FFFFFF")
 ```
 
 ### Let's do associated PERMANOVA analyses to better understand significance of differences in diversity between the 3 factors
@@ -630,48 +624,49 @@ obj_subset <- filter_taxa(obj_subset, max_boot[taxon_ids] >= min_bootstrap | tax
 
 ### Let's make differential abundance plots for our combined dataset-first let's look at diff. abundance of taxa by inoculum concentration
 ```{r abundance plots-inoculum, fig.height=20, fig.width=20, message=FALSE, echo=FALSE}
-# # Calculate difference between groups
-# obj_subset$data$diff_table_conc <- calc_diff_abund_deseq2(obj_subset, data = "tax_abund",
-#                                                          cols = metadata$sample_name[!is.na(metadata$path_conc)],
-#                                                          groups = metadata$path_conc[!is.na(metadata$path_conc)])
-# significant_taxon_ids <- unique(
-#   obj_subset$data$diff_table_conc$taxon_id[! is.na(obj_subset$data$diff_table_conc$padj) & obj_subset$data$diff_table_conc$padj < 0.05]
-# )
-# 
-# range(obj_subset$data$diff_table_conc$padj, finite = TRUE) 
-# range(obj_subset$data$diff_table_conc$log2FoldChange, finite = TRUE) 
-# 
-# set.seed = 1000
-# # Plot results (might take a few minutes)
-# obj_subset %>%
-#   filter_taxa(taxon_ids %in% significant_taxon_ids, supertaxa = TRUE, reassign_obs = FALSE) %>%
-#   filter_taxa(! grepl(x = taxon_names, "_sp$"), reassign_obs = FALSE) %>%
-#   filter_taxa(! grepl(x = taxon_names, "incertae_sedis", ignore.case = TRUE), reassign_obs = FALSE) %>%
-#   remove_redundant_names() %>%
-#   heat_tree_matrix(data = "diff_table_conc",
-#                    node_size = tax_prop,
-#                    node_label = taxon_names,
-#                    node_color = ifelse(is.na(padj) | padj > 0.05, 0, log2FoldChange),
-#                    node_color_range = diverging_palette(),
-#                    node_color_trans = "linear",
-#                    node_color_interval = c(-7.5, 7.5),
-#                    edge_color_interval = c(-7.5, 7.5),
-#                    node_size_range = c(.005, .035),
-#                    node_label_size_range = c(.015, .025),
-#                    node_size_trans = "log10",
-#                    node_size_axis_label = "Mean read proportion",
-#                    node_color_axis_label = "Log2 fold change",
-#                    node_size_digits = 1,
-#                    seed=1000,
-#                    key_size = 0.5,
-#                    output_file = file.path('demulticoder/figures', 'diff_taxon_abund_conc.pdf'))
+# Calculate difference between groups
+obj_subset$data$diff_table_conc <- calc_diff_abund_deseq2(obj_subset, data = "tax_abund",
+                                                         cols = metadata$sample_name[!is.na(metadata$path_conc)],
+                                                         groups = metadata$path_conc[!is.na(metadata$path_conc)])
+significant_taxon_ids <- unique(
+  obj_subset$data$diff_table_conc$taxon_id[! is.na(obj_subset$data$diff_table_conc$padj) & obj_subset$data$diff_table_conc$padj < 0.05]
+)
+
+range(obj_subset$data$diff_table_conc$padj, finite = TRUE) 
+range(obj_subset$data$diff_table_conc$log2FoldChange, finite = TRUE) 
+
+set.seed = 1000
+# Plot results (might take a few minutes)
+obj_subset %>%
+  filter_taxa(taxon_ids %in% significant_taxon_ids, supertaxa = TRUE, reassign_obs = FALSE) %>%
+  filter_taxa(! grepl(x = taxon_names, "_sp$"), reassign_obs = FALSE) %>%
+  filter_taxa(! grepl(x = taxon_names, "incertae_sedis", ignore.case = TRUE), reassign_obs = FALSE) %>%
+  remove_redundant_names() %>%
+  heat_tree_matrix(data = "diff_table_conc",
+                   node_size = tax_prop,
+                   node_label = taxon_names,
+                   node_color = ifelse(is.na(padj) | padj > 0.05, 0, log2FoldChange),
+                   node_color_range = diverging_palette(),
+                   node_color_trans = "linear",
+                   node_color_interval = c(-7.5, 7.5),
+                   edge_color_interval = c(-7.5, 7.5),
+                   node_size_range = c(.005, .035),
+                   node_label_size_range = c(.015, .025),
+                   node_size_trans = "log10",
+                   node_size_axis_label = "Mean read proportion",
+                   node_color_axis_label = "Log2 fold change",
+                   node_size_digits = 1,
+                   seed=1000,
+                   key_size = 0.5,
+                   output_file = file.path('demulticoder/figures', 'diff_taxon_abund_conc.pdf'))
 ```
 
 ### Let's make differential abundance plots for our combined dataset-first let's look at diff. abundance of taxa by whether plots were flooded or not
 ```{r abundance plots-flood, fig.height=30, fig.width=30, message=FALSE, echo=FALSE}
-# Calculate difference between groups
-metadata$flooded <- ifelse(metadata$flooded == TRUE, "Flooded", "Not Flooded")
+obj_subset <- obj2 %>%
+  filter_taxa(taxon_ranks == "Species", supertaxa = TRUE, reassign_obs = c(tax_abund = FALSE)) 
 
+# Calculate difference between groups
 obj_subset$data$diff_table_flood <- calc_diff_abund_deseq2(obj_subset, data = "tax_abund",
                                                            cols = metadata$sample_name[!is.na(metadata$flooded)],
                                                            groups = metadata$flooded[!is.na(metadata$flooded)])
@@ -686,151 +681,149 @@ set.seed = 1000
 obj_subset %>%
   filter_taxa(taxon_ids %in% significant_taxon_ids, supertaxa = TRUE, reassign_obs = FALSE) %>%
   filter_taxa(! grepl(x = taxon_names, "_sp$"), reassign_obs = FALSE) %>%
-  filter_taxa(! grepl(x = taxon_names, "NA", ignore.case = TRUE), reassign_obs = FALSE) %>%
   filter_taxa(! grepl(x = taxon_names, "incertae_sedis", ignore.case = TRUE), reassign_obs = FALSE) %>%
   remove_redundant_names() %>%
-  heat_tree_matrix(data = "diff_table_flood",
-            node_label = taxon_names,
+  heat_tree(node_label = taxon_names,
             node_size = tax_prop,
             node_color = ifelse(is.na(padj) | padj > 0.05, 0, log2FoldChange), # difference between groups
             node_color_trans = "linear",
-            node_color_interval = c(-5, 5),
-            edge_color_interval = c(-5, 5),
+            node_color_interval = c(-5.2, 5.2),
+            edge_color_interval = c(-5.2, 5.2),
             node_size_range = c(.005, .03),
-            node_size_trans = "log2",
+            node_size_trans = "log10",
             node_label_size_range = c(.015, .02),
             node_color_range = diverging_palette(),
             node_size_axis_label = "Mean read proportion",
-            node_color_axis_label = "Log fold change",
-            output_file = file.path('demulticoder/figures', 'diff_taxon_abund_flood.svg'))
+            node_color_axis_label = "Log2 fold change",
+            output_file = file.path('demulticoder/figures', 'diff_taxon_abund_flood.pdf'))
 ```
 
 ### Let's make differential abundance plots for our combined dataset-first let's look at diff. abundance of taxa by inoculum source
 ```{r abundance plots-inoculum source, fig.height=30, fig.width=30, message=FALSE, echo=FALSE}
-# obj_subset <- obj2 %>%
-#   filter_taxa(taxon_ranks == "Species", supertaxa = TRUE, reassign_obs = c(tax_abund = FALSE)) 
-# 
-# #For some reason my levels are ordered, let's unorder
-# metadata$organism <- factor(metadata$organism, ordered = FALSE)
-# 
-# # Calculate difference between groups
-# obj_subset$data$diff_table_org <- calc_diff_abund_deseq2(obj_subset, data = "tax_abund",
-#                                                          cols = metadata$sample_name[!is.na(metadata$organism)],
-#                                                          groups = metadata$organism[!is.na(metadata$organism)])
-# significant_taxon_ids <- unique(
-#   obj_subset$data$diff_table_org$taxon_id[! is.na(obj_subset$data$diff_table_org$padj) & obj_subset$data$diff_table_org$padj < 0.05]
-# )
-# 
-# range(obj_subset$data$diff_table_org$padj, finite = TRUE) 
-# range(obj_subset$data$diff_table_org$log2FoldChange, finite = TRUE) 
-# 
-# # Plot results (might take a few minutes)
-# set.seed = 1000
-# obj_subset %>%
-#   filter_taxa(taxon_ids %in% significant_taxon_ids, supertaxa = TRUE, reassign_obs = FALSE) %>%
-#   filter_taxa(! grepl(x = taxon_names, "_sp$"), reassign_obs = FALSE) %>%
-#   filter_taxa(! grepl(x = taxon_names, "incertae_sedis", ignore.case = TRUE), reassign_obs = FALSE) %>%
-#   remove_redundant_names() %>%
-#   heat_tree_matrix(data = "diff_table_org",
-#                    node_size = tax_prop,
-#                    node_label = taxon_names,
-#                    node_color = ifelse(is.na(padj) | padj > 0.05, 0, log2FoldChange),
-#                    node_color_range = diverging_palette(),
-#                    node_color_trans = "linear",
-#                    node_color_interval = c(-42.1, 42.1),
-#                    edge_color_interval = c(-42.1, 42.1),
-#                    node_size_range = c(.005, .035),
-#                    node_label_size_range = c(.015, .025),
-#                    node_size_trans = "log10",
-#                    node_size_axis_label = "Mean read proportion",
-#                    node_color_axis_label = "Log2 fold change",
-#                    node_size_digits = 1,
-#                    seed=1000,
-#                    key_size = 0.5,
-#                    output_file = file.path('demulticoder/figures', 'diff_taxon_abund_organism.pdf'))
-# ```
-# 
-# ### Let's make differential abundance plots for our combined dataset-first let's look at diff. abundance of taxa by whether pots were in trial 1 or 2
-# ```{r abundance plots-trial, fig.height=30, fig.width=30, message=FALSE, echo=FALSE}
-# obj_subset <- obj2 %>%
-#   filter_taxa(taxon_ranks == "Species", supertaxa = TRUE, reassign_obs = c(tax_abund = FALSE)) 
-# 
-# 
-# # Calculate difference between groups
-# obj_subset$data$diff_table_trial <- calc_diff_abund_deseq2(obj_subset, data = "tax_abund",
-#                                                            cols = metadata$sample_name[!is.na(metadata$experiment)],
-#                                                            groups = metadata$experiment[!is.na(metadata$experiment)])
-# significant_taxon_ids <- unique(
-#   obj_subset$data$diff_table_trial$taxon_id[! is.na(obj_subset$data$diff_table_trial$padj) & obj_subset$data$diff_table_trial$padj < 0.05]
-# )
-# 
-# range(obj_subset$data$diff_table_trial$padj, finite = TRUE) 
-# range(obj_subset$data$diff_table_trial$log2FoldChange, finite = TRUE) 
-# 
-# set.seed = 1000
-# obj_subset %>%
-#   filter_taxa(taxon_ids %in% significant_taxon_ids, supertaxa = TRUE, reassign_obs = FALSE) %>%
-#   filter_taxa(! grepl(x = taxon_names, "_sp$"), reassign_obs = FALSE) %>%
-#   filter_taxa(! grepl(x = taxon_names, "incertae_sedis", ignore.case = TRUE), reassign_obs = FALSE) %>%
-#   remove_redundant_names() %>%
-#   heat_tree(node_label = taxon_names,
-#             node_size = tax_prop,
-#             node_color = ifelse(is.na(padj) | padj > 0.05, 0, log2FoldChange), # difference between groups
-#             node_color_trans = "linear",
-#             node_color_interval = c(-27, 27),
-#             edge_color_interval = c(-27, 27),
-#             node_size_range = c(.005, .03),
-#             node_size_trans = "log10",
-#             node_label_size_range = c(.015, .02),
-#             node_color_range = diverging_palette(),
-#             node_size_axis_label = "Mean read proportion",
-#             node_color_axis_label = "Log2 fold change",
-#             output_file = file.path('demulticoder/figures', 'diff_taxon_abund_trial.pdf'))
+obj_subset <- obj2 %>%
+  filter_taxa(taxon_ranks == "Species", supertaxa = TRUE, reassign_obs = c(tax_abund = FALSE)) 
+
+#For some reason my levels are ordered, let's unorder
+metadata$organism <- factor(metadata$organism, ordered = FALSE)
+
+# Calculate difference between groups
+obj_subset$data$diff_table_org <- calc_diff_abund_deseq2(obj_subset, data = "tax_abund",
+                                                         cols = metadata$sample_name[!is.na(metadata$organism)],
+                                                         groups = metadata$organism[!is.na(metadata$organism)])
+significant_taxon_ids <- unique(
+  obj_subset$data$diff_table_org$taxon_id[! is.na(obj_subset$data$diff_table_org$padj) & obj_subset$data$diff_table_org$padj < 0.05]
+)
+
+range(obj_subset$data$diff_table_org$padj, finite = TRUE) 
+range(obj_subset$data$diff_table_org$log2FoldChange, finite = TRUE) 
+
+# Plot results (might take a few minutes)
+set.seed = 1000
+obj_subset %>%
+  filter_taxa(taxon_ids %in% significant_taxon_ids, supertaxa = TRUE, reassign_obs = FALSE) %>%
+  filter_taxa(! grepl(x = taxon_names, "_sp$"), reassign_obs = FALSE) %>%
+  filter_taxa(! grepl(x = taxon_names, "incertae_sedis", ignore.case = TRUE), reassign_obs = FALSE) %>%
+  remove_redundant_names() %>%
+  heat_tree_matrix(data = "diff_table_org",
+                   node_size = tax_prop,
+                   node_label = taxon_names,
+                   node_color = ifelse(is.na(padj) | padj > 0.05, 0, log2FoldChange),
+                   node_color_range = diverging_palette(),
+                   node_color_trans = "linear",
+                   node_color_interval = c(-42.1, 42.1),
+                   edge_color_interval = c(-42.1, 42.1),
+                   node_size_range = c(.005, .035),
+                   node_label_size_range = c(.015, .025),
+                   node_size_trans = "log10",
+                   node_size_axis_label = "Mean read proportion",
+                   node_color_axis_label = "Log2 fold change",
+                   node_size_digits = 1,
+                   seed=1000,
+                   key_size = 0.5,
+                   output_file = file.path('demulticoder/figures', 'diff_taxon_abund_organism.pdf'))
+```
+
+### Let's make differential abundance plots for our combined dataset-first let's look at diff. abundance of taxa by whether pots were in trial 1 or 2
+```{r abundance plots-trial, fig.height=30, fig.width=30, message=FALSE, echo=FALSE}
+obj_subset <- obj2 %>%
+  filter_taxa(taxon_ranks == "Species", supertaxa = TRUE, reassign_obs = c(tax_abund = FALSE)) 
+
+
+# Calculate difference between groups
+obj_subset$data$diff_table_trial <- calc_diff_abund_deseq2(obj_subset, data = "tax_abund",
+                                                           cols = metadata$sample_name[!is.na(metadata$experiment)],
+                                                           groups = metadata$experiment[!is.na(metadata$experiment)])
+significant_taxon_ids <- unique(
+  obj_subset$data$diff_table_trial$taxon_id[! is.na(obj_subset$data$diff_table_trial$padj) & obj_subset$data$diff_table_trial$padj < 0.05]
+)
+
+range(obj_subset$data$diff_table_trial$padj, finite = TRUE) 
+range(obj_subset$data$diff_table_trial$log2FoldChange, finite = TRUE) 
+
+set.seed = 1000
+obj_subset %>%
+  filter_taxa(taxon_ids %in% significant_taxon_ids, supertaxa = TRUE, reassign_obs = FALSE) %>%
+  filter_taxa(! grepl(x = taxon_names, "_sp$"), reassign_obs = FALSE) %>%
+  filter_taxa(! grepl(x = taxon_names, "incertae_sedis", ignore.case = TRUE), reassign_obs = FALSE) %>%
+  remove_redundant_names() %>%
+  heat_tree(node_label = taxon_names,
+            node_size = tax_prop,
+            node_color = ifelse(is.na(padj) | padj > 0.05, 0, log2FoldChange), # difference between groups
+            node_color_trans = "linear",
+            node_color_interval = c(-27, 27),
+            edge_color_interval = c(-27, 27),
+            node_size_range = c(.005, .03),
+            node_size_trans = "log10",
+            node_label_size_range = c(.015, .02),
+            node_color_range = diverging_palette(),
+            node_size_axis_label = "Mean read proportion",
+            node_color_axis_label = "Log2 fold change",
+            output_file = file.path('demulticoder/figures', 'diff_taxon_abund_trial.pdf'))
 ```
 
 ### Let's try to facet these plots. 
 ```{r facet abundance plots, fig.height=30, fig.width=30, message=FALSE, echo=FALSE}
-# # Read the images
-# conc_img <- magick::image_read_pdf("demulticoder/figures/diff_taxon_abund_conc.pdf")
-# trial_img <- magick::image_read_pdf("demulticoder/figures/diff_taxon_abund_trial.pdf")
-# flood_img <- magick::image_read_pdf("demulticoder/figures/diff_taxon_abund_flood.pdf")
-# org_img <- magick::image_read_pdf("demulticoder/figures/diff_taxon_abund_organism.pdf")
-# 
-# # Convert to grobs
-# conc_grob <- grid::rasterGrob(as.raster(conc_img))
-# trial_grob <- grid::rasterGrob(as.raster(trial_img))
-# flood_grob <- grid::rasterGrob(as.raster(flood_img))
-# org_grob <- grid::rasterGrob(as.raster(org_img))
-# 
-# # Create a layout with larger bottom plots
-# pdf("demulticoder/figures/combined_heat_trees.pdf", width=12, height=10)
-# grid.newpage()
-# pushViewport(viewport(layout = grid.layout(3, 2, 
-#                                            heights = unit(c(0.1, 1, 1.5), "null"),
-#                                            widths = unit(c(1, 1), "null"))))
-# 
-# # Function to place grobs with labels
-# place_grob <- function(grob, row, col, label) {
-#   pushViewport(viewport(layout.pos.row = row, layout.pos.col = col))
-#   grid.text(label, y = unit(1, "npc") + unit(0.5, "lines"), 
-#             gp = gpar(fontsize = 12, fontface = "bold"))
-#   pushViewport(viewport(height = unit(0.9, "npc")))
-#   grid.draw(grob)
-#   upViewport(2)
-# }
-# 
-# # Place grobs with labels
-# place_grob(flood_grob, 2, 1, "A. Flooding Status")
-# place_grob(trial_grob, 2, 2, "B. Trial")
-# place_grob(org_grob, 3, 1, "C. Organism")
-# place_grob(conc_grob, 3, 2, "D. Pathogen Concentration (CFUs/G)")
-# dev.off()
+# Read the images
+conc_img <- magick::image_read_pdf("demulticoder/figures/diff_taxon_abund_conc.pdf")
+trial_img <- magick::image_read_pdf("demulticoder/figures/diff_taxon_abund_trial.pdf")
+flood_img <- magick::image_read_pdf("demulticoder/figures/diff_taxon_abund_flood.pdf")
+org_img <- magick::image_read_pdf("demulticoder/figures/diff_taxon_abund_organism.pdf")
+
+# Convert to grobs
+conc_grob <- grid::rasterGrob(as.raster(conc_img))
+trial_grob <- grid::rasterGrob(as.raster(trial_img))
+flood_grob <- grid::rasterGrob(as.raster(flood_img))
+org_grob <- grid::rasterGrob(as.raster(org_img))
+
+# Create a layout with larger bottom plots
+pdf("demulticoder/figures/combined_heat_trees.pdf", width=12, height=10)
+grid.newpage()
+pushViewport(viewport(layout = grid.layout(3, 2, 
+                                           heights = unit(c(0.1, 1, 1.5), "null"),
+                                           widths = unit(c(1, 1), "null"))))
+
+# Function to place grobs with labels
+place_grob <- function(grob, row, col, label) {
+  pushViewport(viewport(layout.pos.row = row, layout.pos.col = col))
+  grid.text(label, y = unit(1, "npc") + unit(0.5, "lines"), 
+            gp = gpar(fontsize = 12, fontface = "bold"))
+  pushViewport(viewport(height = unit(0.9, "npc")))
+  grid.draw(grob)
+  upViewport(2)
+}
+
+# Place grobs with labels
+place_grob(flood_grob, 2, 1, "A. Flooding Status")
+place_grob(trial_grob, 2, 2, "B. Trial")
+place_grob(org_grob, 3, 1, "C. Organism")
+place_grob(conc_grob, 3, 2, "D. Pathogen Concentration (CFUs/G)")
+dev.off()
 ```
 
 ### Let's finally make an exploratory heat tree to look at community composition across all samples, just retaining ASVs present at least 10 times
 
 ### Overall community plot
-```{r, overall community plot 2}
+```{r, overall community plot}
 obj_subset <- obj2 %>%
   filter_taxa(taxon_ranks == "Species", supertaxa = TRUE, reassign_obs = c(tax_abund = FALSE)) 
 min_bootstrap <- 60
@@ -855,10 +848,10 @@ obj_subset$data$tax_data$rel_stand_dev <- map_dbl(1:nrow(obj_subset$data$tax_abu
 })
 obj_subset
 
-set.seed(5)
+set.seed(1000)
 obj_subset %>%
   filter_taxa(! is_stem) %>%
-  filter_taxa(n_samples >= 50, supertaxa = TRUE, reassign_obs = FALSE) %>%
+  filter_taxa(n_samples >= 10, supertaxa = TRUE, reassign_obs = FALSE) %>%
   filter_taxa(! grepl(x = taxon_names, "_sp$"), reassign_obs = FALSE) %>%
   filter_taxa(! grepl(x = taxon_names, "incertae_sedis", ignore.case = TRUE), reassign_obs = FALSE) %>%
   remove_redundant_names() %>%
@@ -881,301 +874,7 @@ obj_subset %>%
             edge_color_digits = 2,
             edge_size_digits = 2,
             #aspect_ratio = 1.618,
-            output_file = file.path('demulticoder/figures', '/heattree_mostabund_taxa.svg'))
-```
-
-### Reload ASV matrices and metadata for final checks when examining new db to the old version before updates
-```{r load reads-compare old and new db}
-asv_matrix_rps10<-read.csv("demulticoder/data/final_asv_abundance_matrix_rps10.csv")
-asv_matrix_rps10$dada2_tax <- asv_matrix_rps10$dada2_tax <- gsub("Stramenopila", "Eukaryota--100--Domain;Stramenopila", asv_matrix_rps10$dada2_tax)
-asv_matrix_rps10 <- asv_matrix_rps10[, -1]
-colnames(asv_matrix_rps10)[3:ncol(asv_matrix_rps10)] <- gsub("_rps10$", "", colnames(asv_matrix_rps10)[3:ncol(asv_matrix_rps10)])
-
-asv_matrix_rps10_oldb<-read.csv("demulticoder/data_olddb//final_asv_abundance_matrix_rps10.csv")
-asv_matrix_rps10_oldb$dada2_tax <- asv_matrix_rps10_oldb$dada2_tax <- gsub("Stramenopila", "Eukaryota--100--Domain;Stramenopila", asv_matrix_rps10_oldb$dada2_tax)
-asv_matrix_rps10_oldb <- asv_matrix_rps10_oldb[, -1]
-colnames(asv_matrix_rps10_oldb)[3:ncol(asv_matrix_rps10_oldb)] <- gsub("_rps10$", "", colnames(asv_matrix_rps10_oldb)[3:ncol(asv_matrix_rps10_oldb)])
-
-metadata_path <- file.path("demulticoder/data/metadata.csv")
-metadata <- read_csv(metadata_path)
-print(metadata)
-```
-
-### Convert ASV matrices to taxmap objects-updated db
-```{r convert to taxmap obj}
-obj_newdb <- parse_tax_data(asv_matrix_rps10, class_cols = 'dada2_tax', class_sep = ';',
-                      class_regex = '^(.+)--(.+)--(.+)$',
-                      class_key = c(taxon = 'taxon_name', boot = 'info', rank = 'taxon_rank'))
-names(obj_newdb$data) <- c('abund', 'score')
-obj_newdb <- transmute_obs(obj_newdb, 'score', sequence = sequence[input_index], boot = boot, rank = rank)
-
-
-# For diversity calculations, we'll use proportions of read depth
-# We'll set any proportion to 0 that is less than the inverse of the read count of the non-control sample with the fewest reads.
-# This should account for unequal sample read depth without the randomness of rarefaction.
-
-metadata$raw_count <- colSums(obj_newdb$data$abund[, metadata$sample_name])
-lowest_count <- min(metadata$raw_count[! is.na(metadata$organism)])
-lowest_count
-obj_newdb$data$prop <- calc_obs_props(obj_newdb, data = 'abund', cols = metadata$sample_name)
-obj_newdb$data$prop <- zero_low_counts(obj_newdb, data = 'prop', min_count = 1 / lowest_count, cols = metadata$sample_name)
-obj_newdb$data$prop
-
-obj_newdb$data$prop[metadata$sample_name] <- map(metadata$sample_name, function(id) {
-  out <- obj_newdb$data$prop[[id]]
-  out[is.na(out) | is.nan(out)] <- 0
-  out
-})
-
-obj_newdb$data$prop
-```
-
-### Convert ASV matrices to taxmap objects-old db
-```{r convert to taxmap obj-compare old and new db}
-obj_olddb <- parse_tax_data(asv_matrix_rps10_oldb, class_cols = 'dada2_tax', class_sep = ';',
-                      class_regex = '^(.+)--(.+)--(.+)$',
-                      class_key = c(taxon = 'taxon_name', boot = 'info', rank = 'taxon_rank'))
-names(obj_olddb$data) <- c('abund', 'score')
-obj_olddb <- transmute_obs(obj_olddb, 'score', sequence = sequence[input_index], boot = boot, rank = rank)
-
-
-# For diversity calculations, we'll use proportions of read depth
-# We'll set any proportion to 0 that is less than the inverse of the read count of the non-control sample with the fewest reads.
-# This should account for unequal sample read depth without the randomness of rarefaction.
-
-metadata$raw_count <- colSums(obj_olddb$data$abund[, metadata$sample_name])
-lowest_count <- min(metadata$raw_count[! is.na(metadata$organism)])
-lowest_count
-obj_olddb$data$prop <- calc_obs_props(obj_olddb, data = 'abund', cols = metadata$sample_name)
-obj_olddb$data$prop <- zero_low_counts(obj_olddb, data = 'prop', min_count = 1 / lowest_count, cols = metadata$sample_name)
-obj_olddb$data$prop
-
-obj_olddb$data$prop[metadata$sample_name] <- map(metadata$sample_name, function(id) {
-  out <- obj_olddb$data$prop[[id]]
-  out[is.na(out) | is.nan(out)] <- 0
-  out
-})
-
-obj_olddb$data$prop
-```
-
-### Community composition plot-new db-showcase differences in bootstrap support values
-```{r, overall community plot new db}
-min_bootstrap <- 0
-obj_newdb$data$score$boot <- as.numeric(obj_newdb$data$score$boot)
-max_boot <- obj_newdb$data$score %>%
-  group_by(taxon_id) %>%
-  summarise(max = max(boot))
-max_boot <- setNames(max_boot$max, max_boot$taxon_id)
-obj_newdb <- filter_taxa(obj_newdb, max_boot[taxon_ids] >= min_bootstrap | taxon_ranks %in% c("ASV", "Reference"), reassign_obs = c(abund = TRUE, score = FALSE))
-
-obj_newdb$data$asv_prop <- calc_obs_props(obj_newdb, 'abund', cols = metadata$sample_name)
-obj_newdb$data$tax_abund <- calc_taxon_abund(obj_newdb, 'abund', cols = metadata$sample_name)
-obj_newdb$data$tax_prop <- calc_taxon_abund(obj_newdb, 'asv_prop', cols = metadata$sample_name)
-obj_newdb$data$tax_data <- calc_n_samples(obj_newdb, 'tax_prop', cols = metadata$sample_name[metadata$sample_type == 'Sample'])
-obj_newdb$data$tax_data$mean_prop <- rowMeans(obj_newdb$data$tax_prop[, metadata$sample_name])
-
-obj_newdb %>%
-  filter_taxa(taxon_ranks == "Species", supertaxa = TRUE, reassign_obs = c(tax_abund = FALSE)) 
-
-# Calculate the relative standard deviation for each taxon as a measure of how consistently it was found.
-rsd <- function(x, na.rm = FALSE) {sd(x, na.rm = na.rm) / mean(x, na.rm = na.rm)}
-obj_newdb$data$tax_data$rel_stand_dev <- map_dbl(1:nrow(obj_newdb$data$tax_abund), function(i) {
-  rsd(unlist(obj_newdb$data$tax_abund[i, metadata$sample_name]), na.rm = TRUE)
-})
-
-max_boot <- obj_newdb$data$score %>%
-  group_by(taxon_id) %>%
-  summarise(max = max(boot))
-
-# Map the maximum bootstrap support to taxon IDs
-max_boot <- setNames(max_boot$max, max_boot$taxon_id)
-
-# Add maximum bootstrap support to tax_data
-obj_newdb$data$tax_data$max_boot <- max_boot[match(obj_newdb$data$tax_data$taxon_id, names(max_boot))]
-
-set.seed(10)
-
-obj_newdb %>%
-  filter_taxa(! is_stem) %>%
-  filter_taxa(n_samples >= 1, supertaxa = TRUE, reassign_obs = FALSE) %>%
-  filter_taxa(! grepl(x = taxon_names, "_sp$"), reassign_obs = FALSE) %>%
-  filter_taxa(! grepl(x = taxon_names, "incertae_sedis", ignore.case = TRUE), reassign_obs = FALSE) %>%
-  remove_redundant_names() %>%
-  heat_tree(node_size = mean_prop,
-            edge_size = n_samples,
-            node_color = ifelse(is.na(max_boot), 0, max_boot),
-            node_color_range = c("#D2042D","#fc8d62","#a6d854","#66c2a5","lightblue","#b8c0cf"),
-            node_label = taxon_names,
-            node_size_range = c(0.01, 0.03), 
-            node_label_size_range = c(0.014, 0.02),
-            edge_label_size_range = c(0.012, 0.015), 
-            node_size_interval = c(0, 1),
-            edge_size_range = c(0.002, 0.01), 
-            layout = "da", initial_layout = "re",
-            node_color_axis_label = "Bootstrap support",
-            node_size_axis_label = "Mean proportion of reads",
-            edge_size_axis_label = "Number of samples",
-            node_color_digits = 2,
-            node_size_digits = 2,
-            edge_color_digits = 2,
-            edge_size_digits = 2,
-            #aspect_ratio = 1.618,
-            output_file = file.path('demulticoder/figures', '/heattree_mostabund_taxa_rps10_newdb_boot0_greater1.svg'))
-```
-
-### Community composition plot-old db-showcase differences in bootstrap support values
-```{r, overall community plot}
-### Community composition plot-new db-showcase differences in bootstrap support values
-min_bootstrap <- 0
-obj_olddb$data$score$boot <- as.numeric(obj_olddb$data$score$boot)
-max_boot <- obj_olddb$data$score %>%
-  group_by(taxon_id) %>%
-  summarise(max = max(boot))
-max_boot <- setNames(max_boot$max, max_boot$taxon_id)
-obj_olddb <- filter_taxa(obj_olddb, max_boot[taxon_ids] >= min_bootstrap | taxon_ranks %in% c("ASV", "Reference"), reassign_obs = c(abund = TRUE, score = FALSE))
-
-obj_olddb$data$asv_prop <- calc_obs_props(obj_olddb, 'abund', cols = metadata$sample_name)
-obj_olddb$data$tax_abund <- calc_taxon_abund(obj_olddb, 'abund', cols = metadata$sample_name)
-obj_olddb$data$tax_prop <- calc_taxon_abund(obj_olddb, 'asv_prop', cols = metadata$sample_name)
-obj_olddb$data$tax_data <- calc_n_samples(obj_olddb, 'tax_prop', cols = metadata$sample_name[metadata$sample_type == 'Sample'])
-obj_olddb$data$tax_data$mean_prop <- rowMeans(obj_olddb$data$tax_prop[, metadata$sample_name])
-
-obj_olddb %>%
-  filter_taxa(taxon_ranks == "Species", supertaxa = TRUE, reassign_obs = c(tax_abund = FALSE)) 
-
-# Calculate the relative standard deviation for each taxon as a measure of how consistently it was found.
-rsd <- function(x, na.rm = FALSE) {sd(x, na.rm = na.rm) / mean(x, na.rm = na.rm)}
-obj_olddb$data$tax_data$rel_stand_dev <- map_dbl(1:nrow(obj_olddb$data$tax_abund), function(i) {
-  rsd(unlist(obj_olddb$data$tax_abund[i, metadata$sample_name]), na.rm = TRUE)
-})
-
-max_boot <- obj_olddb$data$score %>%
-  group_by(taxon_id) %>%
-  summarise(max = max(boot))
-
-# Map the maximum bootstrap support to taxon IDs
-max_boot <- setNames(max_boot$max, max_boot$taxon_id)
-
-# Add maximum bootstrap support to tax_data
-obj_olddb$data$tax_data$max_boot <- max_boot[match(obj_olddb$data$tax_data$taxon_id, names(max_boot))]
-
-
-set.seed(10)
-
-obj_olddb %>%
-  filter_taxa(! is_stem) %>%
-  filter_taxa(n_samples >= 1, supertaxa = TRUE, reassign_obs = FALSE) %>%
-  filter_taxa(! grepl(x = taxon_names, "_sp$"), reassign_obs = FALSE) %>%
-  filter_taxa(! grepl(x = taxon_names, "incertae_sedis", ignore.case = TRUE), reassign_obs = FALSE) %>%
-  remove_redundant_names() %>%
-  heat_tree(node_size = mean_prop,
-            edge_size = n_samples,
-            node_color = ifelse(is.na(max_boot), 0, max_boot),
-            node_color_range = c("#D2042D","#fc8d62","#a6d854","#66c2a5","lightblue","#b8c0cf"),
-            node_label = taxon_names,
-            node_size_range = c(0.01, 0.03), 
-            node_label_size_range = c(0.014, 0.02),
-            edge_label_size_range = c(0.012, 0.015), 
-            node_size_interval = c(0, 1),
-            edge_size_range = c(0.002, 0.01), 
-            layout = "da", initial_layout = "re",
-            node_color_axis_label = "Bootstrap support",
-            node_size_axis_label = "Mean proportion of reads",
-            edge_size_axis_label = "Number of samples",
-            node_color_digits = 2,
-            node_size_digits = 2,
-            edge_color_digits = 2,
-            edge_size_digits = 2,
-            #aspect_ratio = 1.618,
-            output_file = file.path('demulticoder/figures', '/heattree_mostabund_taxa_rps10_olddb_boot0_greater1.svg'))
-```
-
-Let's facet the two plots so we have a side-by-side comparison of the two databases. 
-```{r, facet community plot, message=FALSE, echo=FALSE}
-old_db <- image_read_pdf("demulticoder/figures/heattree_mostabund_taxa_rps10_olddb_boot0_greater1.pdf")
-new_db <- image_read_pdf("demulticoder/figures/heattree_mostabund_taxa_rps10_newdb_boot0_greater1.pdf")
-
-old_grob <- rasterGrob(as.raster(old_db))
-new_grob <- rasterGrob(as.raster(new_db))
-
-### Now try saving the plot using cowplot
-combined_heat_trees <- plot_grid(old_grob, new_grob, ncol = 2, labels = c('A.', 'B.'), 
-                                 rel_heights = c(1, 1))
-
-# Adjust the layout to reduce white space and adjust margins
-combined_heat_trees <- combined_heat_trees + 
-  theme(plot.margin = unit(c(0.5, 0.5, 0.5, 0.5), "cm"))
-
-# Save the plot with the specified dimensions
-ggsave(combined_heat_trees, path = "demulticoder/figures", filename = "combined_heat_trees_db_compare_60boot.pdf", 
-       width = 7, height = 4.5, bg = "#FFFFFF")
-
-ggsave(combined_heat_trees, path = "demulticoder/figures", filename = "combined_heat_trees_db_compare_0boot.svg", 
-       width = 7, height = 4.5, bg = "#FFFFFF")
-```
-
-### Summary stats comparing db
-```{r, summary stats, message=FALSE, echo=FALSE}
-new_taxa <- asv_matrix_rps10 %>% select(sequence, dada2_tax)
-old_taxa <- asv_matrix_rps10_oldb %>% select(sequence, dada2_tax)
-
-merged_taxa <- merge(old_taxa, new_taxa, by = "sequence", suffixes = c("_old", "_new"))
-
-extract_bootstrap <- function(tax_string) {
-  values <- unlist(strsplit(tax_string, ";"))
-  numeric_values <- sapply(values, function(x) {
-    parts <- unlist(strsplit(x, "--"))
-    if (length(parts) >= 2) {
-      return(as.numeric(parts[2]))
-    } else {
-      return(NA)
-    }
-  })
-  return(paste(numeric_values, collapse = ";"))
-}
-
-merged_taxa$dada2_tax_old_boot <- sapply(merged_taxa$dada2_tax_old, extract_bootstrap)
-merged_taxa$dada2_tax_new_boot <- sapply(merged_taxa$dada2_tax_new, extract_bootstrap)
-
-extract_first_diff <- function(old_boot, new_boot) {
-  old_values <- unlist(strsplit(old_boot, ";"))
-  new_values <- unlist(strsplit(new_boot, ";"))
-  for (i in 1:length(old_values)) {
-    if (old_values[i] != new_values[i]) {
-      return(new_values[i])
-    }
-  }
-  return(NA)
-}
-
-merged_taxa$first_diff_boot_newdb <- mapply(extract_first_diff, merged_taxa$dada2_tax_old_boot, merged_taxa$dada2_tax_new_boot)
-merged_taxa$first_diff_boot_olddb <- mapply(extract_first_diff, merged_taxa$dada2_tax_new_boot, merged_taxa$dada2_tax_old_boot)
-
-merged_taxa$comparison <- mapply(function(x, y) {
-  if (is.na(x) & is.na(y)) {
-    return("equal")
-  } else if (is.na(x) | is.na(y)) {
-    return(NA)
-  } else if (x > y) {
-    return("higher")
-  } else if (x < y) {
-    return("less")
-  } else {
-    return("equal")
-  }
-}, merged_taxa$first_diff_boot_newdb, merged_taxa$first_diff_boot_olddb)
-
-total_comparisons <- sum(!is.na(merged_taxa$comparison))
-prop_higher_newdb <- sum(merged_taxa$comparison == "higher", na.rm = TRUE) / total_comparisons
-prop_less_newdb <- sum(merged_taxa$comparison == "less", na.rm = TRUE) / total_comparisons
-prop_equal_newdb <- sum(merged_taxa$comparison == "equal", na.rm = TRUE) / total_comparisons
-
-write.csv(merged_taxa, "demulticoder/results/taxdifferences_oldnewdb.csv")
-
-cat("Proportion of times new db value is higher than old db value:", prop_higher_newdb, "\n")
-cat("Proportion of times new db value is less than old db value:", prop_less_newdb, "\n")
-cat("Proportion of times new db value is equal to old db value:", prop_equal_newdb, "\n")
+            output_file = file.path('demulticoder/figures', '/heattree_mostabund_taxa.pdf'))
 ```
 
 ```{r session info}
