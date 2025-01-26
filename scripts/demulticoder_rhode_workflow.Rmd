@@ -1,0 +1,60 @@
+---
+title: "demulticoder rhododendron rhizobiome workflow"
+output: html_document
+date: "2024-06-18"
+---
+## Demonstration on how to use demulticoder on a dataset that is actually three separate datasets (RPS10, ITS, and 16S)
+
+Input metadata and primerinfo_params files are in data folder
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "~/demulticoder_benchmarking_2/demulticoder_combined_analysis_rhode")
+#TODO-at some point switch to loading github repo version
+devtools::load_all("~/demulticoder")
+library("demulticoder")
+```
+
+### Step 1-Remove N's and create directory structure for downstream steps
+```{r prepare reads}
+outputs<-prepare_reads(
+  data_directory = "data", 
+  output_directory = "demulticoder_outputs_olddb", 
+  tempdir_path="~/temp_olddb",
+  overwrite_existing = FALSE)
+```
+
+### Step 2-Run Cutadapt to remove primers and then trim reads with DADA2 filterAndTrim function 
+```{r Remove primers and trim reads}
+cut_trim(
+  outputs,
+  cutadapt_path="/usr/bin/cutadapt",
+  overwrite_existing = FALSE)
+```
+
+### Step 3-Core ASV inference step
+```{r ASV inference}
+make_asv_abund_matrix(
+  outputs,
+  overwrite_existing = FALSE)
+```
+
+## Step 4-Assign taxonomy step
+```{r assign taxonomy step}
+  assign_tax(
+    outputs,
+    asv_abund_matrix,
+    db_its = "sh_general_release_dynamic_18.07.2023.fasta",
+    db_rps10 = "release_2.fa",
+    retrieve_files=TRUE,
+    overwrite_existing=TRUE)
+```
+
+## Step 5-convert asv matrix to taxmap and phyloseq objects with one function
+```{r convert matrix to other formats}
+objs<-demulticoder::convert_asv_matrix_to_objs(outputs, save_outputs=TRUE, overwrite_existing = TRUE)
+```
+
+```{r}
+sessioninfo::session_info()
+```

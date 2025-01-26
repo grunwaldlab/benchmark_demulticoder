@@ -13,3 +13,6 @@ mothur_16S_sop/data/prefiltered*
 manuscript_figs_tables
 rps10_cox1_phylogeny
 mothur_16S_sop/vignette_outputs
+demulticoder/data/fungidb*
+demulticoder/vignette_outputs/temp_files/
+demulticoder/data/sh*

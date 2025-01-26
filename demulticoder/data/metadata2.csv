@@ -157,6 +157,8 @@ S17,rps10,1,B03,Cry,TRUE,100,1,Sample,FALSE
 S17,its,1,B03,Cry,TRUE,100,1,Sample,FALSE
 S18,rps10,1,C03,Control,TRUE,0,1,Sample,FALSE
 S18,its,1,C03,Control,TRUE,0,1,Sample,FALSE
+S19,rps10,1,D03,Plu,FALSE,?,1,Sample,TRUE
+S19,its,1,D03,Plu,FALSE,?,1,Sample,TRUE
 S2,rps10,1,B01,Cin,FALSE,1,1,Sample,FALSE
 S2,its,1,B01,Cin,FALSE,1,1,Sample,FALSE
 S20,rps10,1,E03,Plu,FALSE,100,1,Sample,FALSE
@@ -181,6 +183,8 @@ S29,rps10,1,F04,Cin,FALSE,100,1,Sample,FALSE
 S29,its,1,F04,Cin,FALSE,100,1,Sample,FALSE
 S3,rps10,1,C01,Plu,TRUE,1,1,Sample,FALSE
 S3,its,1,C01,Plu,TRUE,1,1,Sample,FALSE
+S30,rps10,1,G04,Plu,?,1,1,Sample,TRUE
+S30,its,1,G04,Plu,?,1,1,Sample,TRUE
 S31,rps10,1,H04,Plu,FALSE,100,1,Sample,FALSE
 S31,its,1,H04,Plu,FALSE,100,1,Sample,FALSE
 S32,rps10,1,A05,Cry,FALSE,100,1,Sample,FALSE
@@ -209,6 +213,8 @@ S42,rps10,1,D06,Plu,TRUE,1,1,Sample,FALSE
 S42,its,1,D06,Plu,TRUE,1,1,Sample,FALSE
 S43,rps10,1,E06,Cry,FALSE,1,1,Sample,FALSE
 S43,its,1,E06,Cry,FALSE,1,1,Sample,FALSE
+S44,rps10,1,F06,Cin,?,100,1,Sample,TRUE
+S44,its,1,F06,Cin,?,100,1,Sample,TRUE
 S45,rps10,1,G06,Cin,TRUE,100,1,Sample,FALSE
 S45,its,1,G06,Cin,TRUE,100,1,Sample,FALSE
 S46,rps10,1,H06,Cin,TRUE,1,1,Sample,FALSE
@@ -257,6 +263,8 @@ S65,rps10,1,D09,Plu,TRUE,100,1,Sample,FALSE
 S65,its,1,D09,Plu,TRUE,100,1,Sample,FALSE
 S66,rps10,1,E09,Cin,TRUE,1,1,Sample,FALSE
 S66,its,1,E09,Cin,TRUE,1,1,Sample,FALSE
+S67,rps10,1,F09,Cin,TRUE,?,1,Sample,TRUE
+S67,its,1,F09,Cin,TRUE,?,1,Sample,TRUE
 S68,rps10,1,G09,Plu,FALSE,1,1,Sample,FALSE
 S68,its,1,G09,Plu,FALSE,1,1,Sample,FALSE
 S69,rps10,1,H09,Plu,FALSE,1,1,Sample,FALSE
@@ -265,12 +273,16 @@ S7,rps10,1,G01,Cry,TRUE,1,1,Sample,FALSE
 S7,its,1,G01,Cry,TRUE,1,1,Sample,FALSE
 S70,rps10,1,A10,Plu,FALSE,1,1,Sample,FALSE
 S70,its,1,A10,Plu,FALSE,1,1,Sample,FALSE
+S71,rps10,1,B10,Plu,TRUE,?,1,Sample,TRUE
+S71,its,1,B10,Plu,TRUE,?,1,Sample,TRUE
 S72,rps10,1,D10,Plu,FALSE,1,1,Sample,FALSE
 S72,its,1,D10,Plu,FALSE,1,1,Sample,FALSE
 S73,rps10,1,E10,Control,FALSE,0,1,Sample,FALSE
 S73,its,1,E10,Control,FALSE,0,1,Sample,FALSE
 S74,rps10,1,F10,Control,TRUE,0,1,Sample,FALSE
 S74,its,1,F10,Control,TRUE,0,1,Sample,FALSE
+S75,rps10,1,G10,Cry,FALSE,?,1,Sample,TRUE
+S75,its,1,G10,Cry,FALSE,?,1,Sample,TRUE
 S76,rps10,1,H10,Cin,FALSE,1,1,Sample,FALSE
 S76,its,1,H10,Cin,FALSE,1,1,Sample,FALSE
 S77,rps10,1,A11,Plu,FALSE,100,1,Sample,FALSE
