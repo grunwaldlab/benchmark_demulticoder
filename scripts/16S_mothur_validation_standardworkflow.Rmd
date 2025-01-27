@@ -13,29 +13,32 @@ library(ggplot2); packageVersion("ggplot2")
 library(dada2); packageVersion("dada2")
 
 knitr::opts_knit$set(root.dir = "~/benchmark_demulticoder/mothur_16S_sop")
-seed <- 2
+seed <- 1
 set.seed(seed)
 ```
-
-## This script shows the key steps in the 16S Mothur SOP standard workflow as outlined here: https://benjjneb.github.io/dada2/tutorial.html. This serves as a point of comparison with the demulticoder analyses.
+### This script outlines the key steps in the 16S Mothur SOP standard workflow as outlined here: https://benjjneb.github.io/dada2/tutorial.html
 
 ### Getting ready
 ```{r inputs, echo=FALSE}
 path <- "data" 
 list.files(path)
 
+# Forward and reverse fastq filenames have format: SAMPLENAME_R1_001.fastq and SAMPLENAME_R2_001.fastq
 fnFs <- sort(list.files(path, pattern="_R1.fastq.gz", full.names = TRUE))
 fnRs <- sort(list.files(path, pattern="_R2.fastq.gz", full.names = TRUE))
+# Extract sample names, assuming filenames have format: SAMPLENAME_XXX.fastq
 sample.names <- sapply(strsplit(basename(fnFs), "_"), `[`, 1)
 ```
 
 ### Check read counts if you filter out reads with Ns first-this is a useful comparison when checking read counts relative to demulticoder analyses
 ```{r read counts-prefilter, echo=FALSE}
+# Place filtered files in filtered/ subdirectory
 prefiltFs <- file.path(path, "prefiltered_standardwf", paste0(sample.names, "_F_prefilt.fastq.gz"))
 prefiltRs <- file.path(path, "prefiltered_standardwf", paste0(sample.names, "_R_prefilt.fastq.gz"))
 names(prefiltFs) <- sample.names
 names(prefiltRs) <- sample.names
 
+set.seed(2)
 out_prefilt <- filterAndTrim(fnFs, prefiltFs, fnRs, prefiltRs, maxN=0, multithread=TRUE) 
 head(out_prefilt)
 ```
@@ -48,7 +51,6 @@ plotQualityProfile(prefiltRs[1:2])
 
 ### Filter and trim
 ```{r filter and trim, echo=FALSE}
-set.seed(seed)
 # Place filtered files in filtered/ subdirectory
 filtFs <- file.path(path, "filtered_standardwf", paste0(sample.names, "_F_filt.fastq.gz"))
 filtRs <- file.path(path, "filtered_standardwf", paste0(sample.names, "_R_filt.fastq.gz"))
@@ -63,7 +65,6 @@ head(out)
 
 ### Learn Error rates
 ```{r learn error rates, echo=FALSE}
-set.seed(seed)
 errF <- learnErrors(filtFs, multithread=TRUE)
 errR <- learnErrors(filtRs, multithread=TRUE)
 plotErrors(errF, nominalQ=TRUE)
@@ -71,7 +72,6 @@ plotErrors(errF, nominalQ=TRUE)
 
 ### Sample inference
 ```{r sample inference, echo=FALSE}
-set.seed(seed)
 dadaFs <- dada(filtFs, err=errF, multithread=TRUE)
 dadaRs <- dada(filtRs, err=errR, multithread=TRUE)
 dadaFs[[1]]
@@ -80,8 +80,8 @@ dadaRs[[1]]
 
 ### Merge paired reads
 ```{r merge paired reads, echo=FALSE}
-set.seed(seed)
 mergers <- mergePairs(dadaFs, filtFs, dadaRs, filtRs, verbose=TRUE)
+# Inspect the merger data.frame from the first sample
 head(mergers[[1]])
 ```
 

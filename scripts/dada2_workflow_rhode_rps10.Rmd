@@ -135,7 +135,7 @@ process_file_pair <- function(i) {
 mclapply(seq_along(fnFs.prefilt), process_file_pair, mc.cores = num_cores)
 ```
 
-### Get stats on primer counts before running Cutadapt 
+## Get stats on primer counts before running Cutadapt 
 ```{r get primer counts}
 FWD <- "GTTGGTTAGAGYARAAGACT"  
 REV <- "ATRYYTAGAAAGAYTYGAACT"
@@ -203,7 +203,7 @@ plotQualityProfile(cutFs[1:5])
 plotQualityProfile(cutRs[1:5])
 ```
 
-### Run core filterAndTrim command from DADA2 to remove any poor quality reads
+## Run core filterAndTrim command from DADA2 to remove any poor quality reads
 ```{r filter and trim reads}
 filtFs <- file.path(path.cut, "filtered", basename(cutFs))
 filtRs <- file.path(path.cut, "filtered", basename(cutRs))
