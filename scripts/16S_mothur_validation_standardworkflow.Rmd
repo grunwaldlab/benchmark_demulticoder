@@ -197,6 +197,7 @@ ps.top20 <- prune_taxa(top20, ps.top20)
 plot_bar(ps.top20, x="Day", fill="Family") + facet_wrap(~When, scales="free_x")
 ```
 
+### Let's collect info on R configuration and associated package versions that are downloaded
 ```{r, session info}
 sessioninfo::session_info()
 ```

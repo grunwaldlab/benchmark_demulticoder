@@ -848,10 +848,10 @@ obj_subset$data$tax_data$rel_stand_dev <- map_dbl(1:nrow(obj_subset$data$tax_abu
 })
 obj_subset
 
-set.seed(1000)
+set.seed(5)
 obj_subset %>%
   filter_taxa(! is_stem) %>%
-  filter_taxa(n_samples >= 10, supertaxa = TRUE, reassign_obs = FALSE) %>%
+  filter_taxa(n_samples >= 50, supertaxa = TRUE, reassign_obs = FALSE) %>%
   filter_taxa(! grepl(x = taxon_names, "_sp$"), reassign_obs = FALSE) %>%
   filter_taxa(! grepl(x = taxon_names, "incertae_sedis", ignore.case = TRUE), reassign_obs = FALSE) %>%
   remove_redundant_names() %>%
@@ -877,6 +877,7 @@ obj_subset %>%
             output_file = file.path('demulticoder/figures', '/heattree_mostabund_taxa.pdf'))
 ```
 
+### Let's collect info on R configuration and associated package versions that are downloaded
 ```{r session info}
 sessioninfo::session_info()
 ```

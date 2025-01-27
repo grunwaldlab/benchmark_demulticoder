@@ -5,22 +5,23 @@ date: "2024-06-18"
 ---
 ## Demonstration on how to use demulticoder on a dataset that is actually three separate datasets (RPS10, ITS, and 16S)
 
-Input metadata and primerinfo_params files are in data folder
-
+### Load package
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-knitr::opts_knit$set(root.dir = "~/demulticoder_benchmarking_2/demulticoder_combined_analysis_rhode")
-#TODO-at some point switch to loading github repo version
-devtools::load_all("~/demulticoder")
+knitr::opts_knit$set(root.dir = "~/benchmark_demulticoder/demulticoder")
+devtools::install_github("grunwaldlab/demulticoder", force=TRUE)
 library("demulticoder")
+
+set.seed(1)
 ```
 
 ### Step 1-Remove N's and create directory structure for downstream steps
 ```{r prepare reads}
 outputs<-prepare_reads(
   data_directory = "data", 
-  output_directory = "demulticoder_outputs_olddb", 
-  tempdir_path="~/temp_olddb",
+  output_directory = "outputs", 
+  tempdir_path="outputs",
+  tempdir_id = "temp_files",
   overwrite_existing = FALSE)
 ```
 
@@ -45,7 +46,7 @@ make_asv_abund_matrix(
     outputs,
     asv_abund_matrix,
     db_its = "sh_general_release_dynamic_18.07.2023.fasta",
-    db_rps10 = "release_2.fa",
+    db_rps10 = "oomycetedb_v2.fasta",
     retrieve_files=TRUE,
     overwrite_existing=TRUE)
 ```
@@ -55,6 +56,7 @@ make_asv_abund_matrix(
 objs<-demulticoder::convert_asv_matrix_to_objs(outputs, save_outputs=TRUE, overwrite_existing = TRUE)
 ```
 
+### Let's collect info on R configuration and associated package versions that are downloaded
 ```{r}
 sessioninfo::session_info()
 ```

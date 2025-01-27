@@ -182,6 +182,7 @@ ggsave("~/benchmark_demulticoder/mothur_16S_sop/figures/faceted_plots.pdf", comb
 ggsave("~/benchmark_demulticoder/mothur_16S_sop/figures/faceted_plots.svg", combined_plot, width = 6, height = 10)
 ```
 
+### Let's collect info on R configuration and associated package versions that are downloaded
 ```{r}
 sessioninfo::session_info()
 ```

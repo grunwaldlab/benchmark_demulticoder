@@ -28,7 +28,6 @@ path <- "~/demulticoder_benchmarking/rhode_DADA2_workflow/data/reads"
 fnFs <- sort(list.files(path1, pattern="_R1.fastq.gz", full.names = TRUE))
 fnRs <- sort(list.files(path1, pattern="_R2.fastq.gz", full.names = TRUE))
 
-#Set up directory structure of output files
 fnFs.prefilt <- file.path(path, "prefiltered", basename(fnFs))
 fnRs.prefilt <- file.path(path, "prefiltered", basename(fnRs))
 
@@ -41,12 +40,11 @@ FWD <- "CTTGGTCATTTAGAGGAAGTAA"
 REV <- "GCTGCGTTCTTCATCGATGC"
 
 allOrients <- function(primer) {
-    # Create all orientations of the input sequence
     require(Biostrings)
-    dna <- DNAString(primer)  # The Biostrings works w/ DNAString objects rather than character vectors
+    dna <- DNAString(primer) 
     orients <- c(Forward = dna, Complement = Biostrings::complement(dna), Reverse = Biostrings::reverse(dna),
         RevComp = Biostrings::reverseComplement(dna))
-    return(sapply(orients, toString))  # Convert back to character vector
+    return(sapply(orients, toString)) 
 }
 FWD.orients <- allOrients(FWD)
 REV.orients <- allOrients(REV)
@@ -57,7 +55,6 @@ containsPrimer <- function(primer, read) {
   any(sapply(primer, function(p) {
     p <- DNAString(as.character(p))
     pattern <- as.character(p)
-    # Replace ambiguity codes with appropriate regex patterns
     pattern <- gsub("R", "[AG]", pattern)
     pattern <- gsub("Y", "[CT]", pattern)
     pattern <- gsub("S", "[GC]", pattern)
@@ -69,7 +66,6 @@ containsPrimer <- function(primer, read) {
     pattern <- gsub("H", "[ACT]", pattern)
     pattern <- gsub("V", "[ACG]", pattern)
     pattern <- gsub("N", "[ACGT]", pattern)
-    # Allow for up to 2 mismatches
     grepl(pattern, as.character(read), ignore.case = TRUE)
   }))
 }
@@ -80,10 +76,8 @@ dir.create(file.path(path, "its/demultiplexed"), recursive = TRUE, showWarnings 
 fnFs.demultiplex <- file.path(path, "its/demultiplexed", basename(fnFs))
 fnRs.demultiplex <- file.path(path, "its/demultiplexed", basename(fnRs))
 
-# Set the number of cores to use (adjust as needed)
-num_cores <- parallel::detectCores() - 1  # Use all but one core
+num_cores <- parallel::detectCores() - 1 
 
-# Function to process a single file pair
 process_file_pair <- function(i) {
   cat("Processing file:", basename(fnFs.prefilt[i]), "\n")
   
@@ -104,7 +98,6 @@ process_file_pair <- function(i) {
   cat("Reads with forward primer:", sum(hasitsF), "\n")
   cat("Reads with reverse primer:", sum(hasitsR), "\n")
   
-  # Keep reads where either forward or reverse read contains an its primer
   keepReads <- hasitsF | hasitsR
   
   cat("Total reads with its primers:", sum(keepReads), "\n")
@@ -142,7 +135,6 @@ process_file_pair <- function(i) {
   cat("\n")
 }
 
-# Run the processing in parallel
 mclapply(seq_along(fnFs.prefilt), process_file_pair, mc.cores = num_cores)
 ```
 
@@ -152,9 +144,8 @@ FWD <- "CTTGGTCATTTAGAGGAAGTAA"
 REV <- "GCTGCGTTCTTCATCGATGC"
 
 allOrients <- function(primer) {
-    # Create all orientations of the input sequence
     require(Biostrings)
-    dna <- DNAString(primer)  # The Biostrings works w/ DNAString objects rather than character vectors
+    dna <- DNAString(primer)
     orients <- c(Forward = dna, Complement = Biostrings::complement(dna), Reverse = Biostrings::reverse(dna),
         RevComp = Biostrings::reverseComplement(dna))
     return(sapply(orients, toString))  # Convert back to character vector
@@ -164,7 +155,6 @@ REV.orients <- allOrients(REV)
 FWD.orients
 
 primerHits <- function(primer, fn) {
-    # Counts number of reads in which the primer is found
     nhits <- vcountPattern(primer, sread(readFastq(fn)), fixed = FALSE)
     return(sum(nhits > 0))
 }
