@@ -34,12 +34,12 @@ set.seed(seed)
 
 ### Load outputs from the demulticoder workflow
 ```{r prepare reads}
-asv_matrix_rps10<-read.csv("demulticoder/data/final_asv_abundance_matrix_rps10.csv")
+asv_matrix_rps10<-read.csv("demulticoder/outputs/final_asv_abundance_matrix_rps10.csv")
 asv_matrix_rps10$dada2_tax <- asv_matrix_rps10$dada2_tax <- gsub("Stramenopila", "Eukaryota--100--Domain;Stramenopila", asv_matrix_rps10$dada2_tax)
 asv_matrix_rps10 <- asv_matrix_rps10[, -1]
 colnames(asv_matrix_rps10)[3:ncol(asv_matrix_rps10)] <- gsub("_rps10$", "", colnames(asv_matrix_rps10)[3:ncol(asv_matrix_rps10)])
 
-asv_matrix_its<-read.csv("demulticoder/data/final_asv_abundance_matrix_its.csv")
+asv_matrix_its<-read.csv("demulticoder/outputs/final_asv_abundance_matrix_its.csv")
 asv_matrix_its$dada2_tax <- gsub("Fungi--", "Eukaryota--100--Domain;Fungi--", asv_matrix_its$dada2_tax)
 asv_matrix_its <- asv_matrix_its[, -1]
 colnames(asv_matrix_its)[3:ncol(asv_matrix_rps10)] <- gsub("_its$", "", colnames(asv_matrix_its)[3:ncol(asv_matrix_its)])
@@ -59,15 +59,15 @@ abundance <- rbind(
   asv_matrix_rps10[, c("sequence", "dada2_tax", sample_cols_rps10)]  # RPS10 data
 )
 
-write.csv(abundance, "demulticoder/data/final_asv_abundance_matrix_combined_demulticoder.csv")
+write.csv(abundance, "demulticoder/outputs/final_asv_abundance_matrix_combined_demulticoder.csv")
 
-metadata_path <- file.path("demulticoder/data/metadata.csv")
+metadata_path <- file.path("demulticoder/data/metadata_comp.csv")
 metadata <- read_csv(metadata_path)
 print(metadata)
 
 #Fourth, let's track reads
-track_reads_demulticoder_its<-read.csv("demulticoder/data/track_reads_its.csv", row.names = 1)
-track_reads_demulticoder_rps10<-read.csv("demulticoder/data/track_reads_rps10.csv", row.names = 1)
+track_reads_demulticoder_its<-read.csv("demulticoder/outputs/track_reads_its.csv", row.names = 1)
+track_reads_demulticoder_rps10<-read.csv("demulticoder/outputs/track_reads_rps10.csv", row.names = 1)
 ```
 
 ### Let's collect some summary stats for each dataset
@@ -175,7 +175,7 @@ if(exists("asv_matrix_its")) {
 First we will configure the combined taxmap object
 ```{r make taxmap object, fig.height=10, fig.width=6, message=FALSE}
 #load reference database
-rps10_database <- read_fasta("demulticoder/data/rps10_reference_db.fa")
+rps10_database <- read_fasta("demulticoder/outputs/rps10_reference_db.fa")
 innoc_species <- c(Cin = "Phytophthora_cinnamomi",  Plu = "Phytophthora_plurivora", Cry = "Globisporangium_cryptoirregulare")
 innoc_regex <- paste0('(', paste0(innoc_species, collapse = '|'), ')')
 innoc_seqs <- rps10_database[grepl(names(rps10_database), pattern = innoc_regex)]
@@ -194,7 +194,7 @@ align_mismatch <- function(alignment) {
 }
 
 # Align each sequence to each asv and make table of results"
-aligned_data_path <- file.path("demulticoder/data", "infection_aligned_data.rds")
+aligned_data_path <- file.path("demulticoder/outputs", "infection_aligned_data.rds")
 
 if (file.exists(aligned_data_path)) {
   aligned_data <- readRDS(aligned_data_path)
