@@ -15,16 +15,16 @@ knitr::opts_chunk$set(
   comment = "#>",
   fig.path = "./"
 )
+
+library(Biostrings); packageVersion("Biostrings")
 ```
 
 ## Demonstration of how to use demulticoder on a dataset that is actually three separate datasets (RPS10, ITS, and 16S) at once
 
 Input metadata and primerinfo_params files are in data folder  
-
 The only required columns are the first with sample names, and the second with the primer name/barcode used. The subsequent columns are user-specific columns for downstream steps
 *metadata.csv file*
 ```{r, echo=FALSE}
-# First, create your data frame
 data <- data.frame(
   sample_name = c("F3D0", "F3D1", "F3D141", "F3D142", "F3D143", "F3D144", "F3D145", 
                   "F3D146", "F3D147", "F3D148", "F3D149", "F3D150", "F3D2", "F3D3", 
@@ -73,10 +73,11 @@ primer_info <- data.frame(
 knitr::kable(primer_info, row.names = FALSE)
 ```
 
+### Load package
 ```{r setup, include=FALSE}
-#TODO-at some point switch to loading github repo version
 devtools::install_github("grunwaldlab/demulticoder", force=TRUE)
 library("demulticoder")
+set.seed(1)
 ```
 
 ### Step 1-Remove N's and create directory structure for downstream steps
@@ -99,7 +100,7 @@ cut_trim(
 ```{r ASV inference, fig.height=6, fig.width=6}
 make_asv_abund_matrix(
   outputs,
-  overwrite_existing = TRUE)
+  overwrite_existing = FALSE)
 ```
 
 ### Step 4-Assign taxonomy step
@@ -107,7 +108,7 @@ make_asv_abund_matrix(
 assign_tax(
   outputs,
   asv_abund_matrix,
-  db_16S="silva_nr99_v138.1_wSpecies_train_set.fa",
+  db_16S="silva_nr99_v138.2_wSpecies_train_set.fa",
   retrieve_files=TRUE,
   overwrite_existing=TRUE)
 ```
@@ -119,9 +120,6 @@ objs<-convert_asv_matrix_to_objs(outputs, save_outputs=TRUE, overwrite_existing 
 
 ### Step 6-evaluate accuracy using mock community, as shown in dada2 tutorial
 ```{r examine accuracy, fig.height=6, fig.width=6}
-library(Biostrings); packageVersion("Biostrings")
-
-
 tax_matrix<-read.csv("~/demulticoder_benchmarking/mothur_16S_sop/outputs/final_asv_abundance_matrix_r16S.csv")
 
 unqs.mock <- tax_matrix[, c(2, which(colnames(tax_matrix) == "Mock_r16S"))]
@@ -152,7 +150,7 @@ ord.nmds.bray <- phyloseq::ordinate(ps.prop, method="NMDS", distance="bray")
 phyloseq::plot_ordination(ps.prop, ord.nmds.bray, color="When", title="Bray NMDS")
 ```
 
-### Step 9-Let's look at what the top 20 taxa are in the early vs. late samples  time points, as shown in the dada2 tutorial
+### Step 9-Let's look at what the top 20 taxa are in the early vs. late samples time points, as shown in the DADA2 tutorial
 ```{r phyloseq community analysis, fig.height=5, fig.width=8}
 top20 <- names(sort(phyloseq::taxa_sums(objs$phyloseq_r16S), decreasing=TRUE))[1:20]
 ps.top20 <- phyloseq::transform_sample_counts(objs$phyloseq_r16S, function(OTU) OTU/sum(OTU))
@@ -160,7 +158,7 @@ ps.top20 <- phyloseq::prune_taxa(top20, ps.top20)
 phyloseq::plot_bar(ps.top20, x="Day", fill="Family") + ggplot2::facet_wrap(~When, scales="free_x")
 ```
 
-
+### Let's collect info on R configuration and associated package versions that are downloaded
 ```{r}
 sessioninfo::session_info()
 ```
