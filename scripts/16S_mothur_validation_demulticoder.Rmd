@@ -11,6 +11,8 @@ library(phyloseq); packageVersion("phyloseq")
 library(Biostrings); packageVersion("Biostrings")
 library(ggplot2); packageVersion("ggplot2")
 library(dada2); packageVersion("dada2")
+library(gridtext); packageVersion("gridtext")
+library(grid); packageVersion("grid")
 devtools::install_github("grunwaldlab/demulticoder", force=TRUE)
 library("demulticoder"); packageVersion("demulticoder")
 
@@ -88,7 +90,7 @@ outputs<-prepare_reads(
 ```{r Remove primers and trim reads, fig.height=6, fig.width=6}
 cut_trim(
   outputs,
-  cutadapt_path="/opt/homebrew/bin/cutadapt",
+  cutadapt_path="/usr/bin/cutadapt",
   overwrite_existing = FALSE)
 ```
 
@@ -182,12 +184,8 @@ ggsave("~/benchmark_demulticoder/mothur_16S_sop/figures/faceted_plots.pdf", comb
 ggsave("~/benchmark_demulticoder/mothur_16S_sop/figures/faceted_plots.svg", combined_plot, width = 6, height = 10)
 ```
 
-<<<<<<< HEAD
+
 ### Let's collect info on R configuration and associated package versions that are downloaded
-=======
-
-
->>>>>>> parent of 49520ef (update files)
 ```{r}
 sessioninfo::session_info()
 ```

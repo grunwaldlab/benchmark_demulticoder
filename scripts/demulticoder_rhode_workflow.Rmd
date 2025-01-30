@@ -10,8 +10,8 @@ date: "2024-06-18"
 knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_knit$set(root.dir = "~/benchmark_demulticoder/demulticoder")
 devtools::install_github("grunwaldlab/demulticoder", force=TRUE)
+devtools::load_all("~/demulticoder")
 library("demulticoder")
-
 set.seed(1)
 ```
 
@@ -20,7 +20,7 @@ set.seed(1)
 outputs<-prepare_reads(
   data_directory = "data", 
   output_directory = "outputs", 
-  tempdir_path="outputs",
+  tempdir_path="temp_outputs",
   tempdir_id = "temp_files",
   overwrite_existing = FALSE)
 ```
@@ -45,8 +45,8 @@ make_asv_abund_matrix(
   assign_tax(
     outputs,
     asv_abund_matrix,
+    db_rps10 = "release_1.fa",
     db_its = "sh_general_release_dynamic_18.07.2023.fasta",
-    db_rps10 = "oomycetedb_v2.fasta",
     retrieve_files=TRUE,
     overwrite_existing=TRUE)
 ```

@@ -6,7 +6,7 @@ date: "2024-06-18"
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-knitr::opts_knit$set(root.dir = "~/demulticoder_benchmarking/rhode_DADA2_workflow")
+knitr::opts_knit$set(root.dir = "~/benchmark_demulticoder/standard_workflow")
 
 library(phyloseq); packageVersion("phyloseq")
 library(ggplot2); packageVersion("ggplot2")
@@ -22,8 +22,8 @@ set.seed(1)
 
 ### Remove Ns from any reads before beginning DADA2 workflow
 ```{r remove Ns}
-path1 <- "~/demulticoder_benchmarking/demulticoder_combined_analysis_rhode/data"
-path <- "~/demulticoder_benchmarking/rhode_DADA2_workflow/data/reads"
+path1 <- "~/benchmark_demulticoder/demulticoder/data"
+path <- "~/benchmark_demulticoder/standard_workflow/reads"
 dir.create(file.path(path, "prefiltered"), recursive = TRUE, showWarnings = FALSE)
 
 fnFs <- sort(list.files(path1, pattern="_R1.fastq.gz", full.names = TRUE))
@@ -249,7 +249,7 @@ table(nchar(getSequences(seqtab.nochim)))
 sample_prefixes <- stringr::str_remove(rownames(seqtab.nochim), "_R1\\.fastq\\.gz$")
 rownames(seqtab.nochim) <- sample_prefixes
 
-write.table(seqtab.nochim, file="outputs/rps10/rps10_seqtab_nochim.out",sep="\t",quote=F)
+write.table(seqtab.nochim, file="rps10/outputs/rps10_seqtab_nochim.out",sep="\t",quote=F)
 ```
 
 ### At the end, we will track reads through the full DADA2 pipeline
@@ -264,18 +264,18 @@ sample_prefixes <- stringr::str_remove(rownames(track), "_R1\\.fastq\\.gz$")
 rownames(track) <- sample_prefixes
 
 head(track)
-write.table(track, file="outputs/rps10/rps10_trackreads.out",sep="\t",quote=F)
+write.table(track, file="rps10/outputs/rps10_trackreads.out",sep="\t",quote=F)
 ```
 
 ### If everything look good, let's assign taxonomy
 ``` {r assignTaxonomy}
-oomycetedb.ref <- "db/rps10_reference_db.fa"  # CHANGE ME to location on your machine
-taxa <- assignTaxonomy(seqtab.nochim, oomycetedb.ref, multithread = TRUE, minBoot = 0, outputBootstraps = TRUE, verbose=TRUE, tryRC = FALSE)
+oomycetedb.ref <- "~/benchmark_demulticoder/standard_workflow/rps10/data/rps10_reference_db_unique.fa"  # CHANGE ME to location on your machine
+taxa <- assignTaxonomy(seqtab.nochim, oomycetedb.ref, multithread = TRUE, minBoot = 0, outputBootstraps = TRUE, verbose=TRUE, tryRC = FALSE, taxLevels = c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "Species", "Reference"))
 
 taxa.print <- taxa  # Removing sequence rownames for display only
 rownames(taxa.print) <- NULL
 
-write.table(taxa, file="outputs/rps10/rps10_taxa.out",sep="\t",quote=F)
+write.table(taxa, file="rps10/outputs/rps10_taxa_finaladj.out",sep="\t",quote=F)
 ```
 
 ### Let's collect info on R configuration and associated package versions that are downloaded

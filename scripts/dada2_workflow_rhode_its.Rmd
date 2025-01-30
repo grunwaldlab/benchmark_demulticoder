@@ -6,7 +6,7 @@ date: "2024-06-18"
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-knitr::opts_knit$set(root.dir = "~/demulticoder_benchmarking/rhode_DADA2_workflow")
+knitr::opts_knit$set(root.dir = "~/benchmark_demulticoder/standard_workflow")
 
 library(phyloseq); packageVersion("phyloseq")
 library(ggplot2); packageVersion("ggplot2")
@@ -22,8 +22,8 @@ set.seed(1)
 
 Remove Ns from any reads before beginning DADA2 workflow. I did this for the rps10 analysis (which I ran first) so I'll just reference these filtered reads
 ```{r remove Ns}
-path1 <- "~/demulticoder_benchmarking/demulticoder_combined_analysis_rhode/data"
-path <- "~/demulticoder_benchmarking/rhode_DADA2_workflow/data/reads"
+path1 <- "~/benchmark_demulticoder/demulticoder/data_small"
+path <- "~/benchmark_demulticoder/standard_workflow/reads"
 
 fnFs <- sort(list.files(path1, pattern="_R1.fastq.gz", full.names = TRUE))
 fnRs <- sort(list.files(path1, pattern="_R2.fastq.gz", full.names = TRUE))
@@ -263,7 +263,7 @@ seqtab.nochim <- removeBimeraDenovo(seqtab, method="consensus", multithread=TRUE
 table(nchar(getSequences(seqtab.nochim)))
 sample_prefixes <- stringr::str_remove(rownames(seqtab.nochim), "_R1\\.fastq\\.gz$")
 rownames(seqtab.nochim) <- sample_prefixes
-write.table(seqtab.nochim, file="outputs/its/its_seqtab_nochim.out",sep="\t",quote=F)
+write.table(seqtab.nochim, file="its/outputs/its_seqtab_nochim.out",sep="\t",quote=F)
 ```
 
 ### At the end, we will track reads through the full DADA2 pipeline
@@ -281,18 +281,17 @@ rownames(track) <- sample_prefixes
 
 head(track)
 
-write.table(track, file="outputs/its/its_trackreads.out",sep="\t",quote=F)
+write.table(track, file="its/outputs/its_trackreads.out",sep="\t",quote=F)
 ```
 
 ### If everything look good, let's assign taxonomy
 ``` {r assignTaxonomy}
-itsdb.ref <- "db/sh_general_release_dynamic_18.07.2023.fasta"  # CHANGE ME to location on your machine
+itsdb.ref <- "its/data/sh_general_release_dynamic_18.07.2023.fasta"  # CHANGE ME to location on your machine
 taxa <- assignTaxonomy(seqtab.nochim, itsdb.ref, multithread = TRUE, minBoot = 0, outputBootstraps = TRUE, verbose=TRUE, tryRC = FALSE)
-
 taxa.print <- taxa  # Removing sequence rownames for display only
 rownames(taxa.print) <- NULL
 
-write.table(taxa, file="outputs/its/its_taxa.out",sep="\t",quote=F)
+write.table(taxa, file="its/outputs/its_taxa.out",sep="\t",quote=F)
 ```
 
 ### Let's collect info on R configuration and associated package versions that are downloaded
