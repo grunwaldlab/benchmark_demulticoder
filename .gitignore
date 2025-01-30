@@ -17,4 +17,6 @@ demulticoder/data/fungidb*
 demulticoder/vignette_outputs/temp_files/
 demulticoder/data/sh*
 mothur_16S_sop/vignette_outputs_temp/
-
+standard_workflow/rps10/data/*.fa
+standard_workflow/its/data/*.fa
+standard_workflow/its/data/*.fasta
