@@ -39,6 +39,8 @@ asv_matrix_rps10$dada2_tax <- asv_matrix_rps10$dada2_tax <- gsub("Stramenopila",
 asv_matrix_rps10 <- asv_matrix_rps10[, -1]
 colnames(asv_matrix_rps10)[3:ncol(asv_matrix_rps10)] <- gsub("_rps10$", "", colnames(asv_matrix_rps10)[3:ncol(asv_matrix_rps10)])
 
+asv_matrix_rps10$dada2_tax <- gsub(";oomycetedb_[0-9]+--[0-9]+--Reference", "", asv_matrix_rps10$dada2_tax)
+
 asv_matrix_its<-read.csv("demulticoder/outputs/final_asv_abundance_matrix_its.csv")
 asv_matrix_its$dada2_tax <- gsub("Fungi--", "Eukaryota--100--Domain;Fungi--", asv_matrix_its$dada2_tax)
 asv_matrix_its <- asv_matrix_its[, -1]
@@ -58,6 +60,7 @@ abundance <- rbind(
  asv_matrix_its[, c("sequence", "dada2_tax", sample_cols_its)],  # ITS data
   asv_matrix_rps10[, c("sequence", "dada2_tax", sample_cols_rps10)]  # RPS10 data
 )
+
 
 write.csv(abundance, "demulticoder/outputs/final_asv_abundance_matrix_combined_demulticoder.csv")
 
@@ -175,7 +178,7 @@ if(exists("asv_matrix_its")) {
 First we will configure the combined taxmap object
 ```{r make taxmap object, fig.height=10, fig.width=6, message=FALSE}
 #load reference database
-rps10_database <- read_fasta("demulticoder/outputs/rps10_reference_db.fa")
+rps10_database <- read_fasta("demulticoder/data/rps10_reference_db_unique.fa")
 innoc_species <- c(Cin = "Phytophthora_cinnamomi",  Plu = "Phytophthora_plurivora", Cry = "Globisporangium_cryptoirregulare")
 innoc_regex <- paste0('(', paste0(innoc_species, collapse = '|'), ')')
 innoc_seqs <- rps10_database[grepl(names(rps10_database), pattern = innoc_regex)]
@@ -228,11 +231,15 @@ infection_data <- aligned_data %>%
 ```
 
 ### Prepare trimmed tables for subsequent analysis
+
+
+For the sample data, we will add columns for the proportion of reads in each sample representing each inoculum as well as a columns that indicate whether the expected inoculum was found, and if so, if it was the only inoculum found.
+
 ```{r prepare metadata and asv tables}
 ## Update abundance matrix and metadata with results
 inoculum_asv_key <- setNames(infection_data$species, infection_data$asv_seq)
 abundance <- mutate(abundance, is_inoculum = sequence %in% infection_data$asv_seq, inoculum = inoculum_asv_key[sequence], .after = "dada2_tax")
-write_csv(abundance, file.path('demulticoder/data', 'abundance_with_infection_data.csv'))
+write_csv(abundance, file.path('demulticoder/outputs', 'abundance_with_infection_data.csv'))
 
 #Let's append metadata table with more info
 species_name_key <- c(Phytophthora_cinnamomi = "cin_prop", Phytophthora_plurivora = "plu_prop", Globisporangium_cryptoirregulare = "cry_prop")
@@ -302,80 +309,7 @@ metadata$valid_inoc <- (is.na(metadata$expected_innoc_prop) | metadata$expected_
 map_dbl(split(metadata$valid_inoc, metadata$organism), sum)
 
 # Save new metadata
-write_csv(metadata, file.path('demulticoder/data', 'metadata_with_infection_data.csv'))
-```
-
-### For the sample data, I will add columns for the proportion of reads in each sample representing each inoculum as well as a columns that indicate whether the expected inoculum was found, and if so, if it was the only inoculum found.
-```{r prep metadata}
-# Get per-sample proportions of reads
-species_name_key <- c(Phytophthora_cinnamomi = "cin_prop", Phytophthora_plurivora = "plu_prop", Globisporangium_cryptoirregulare = "cry_prop")
-sample_infection_data <- infection_data %>%
-  group_by(species) %>% summarise_at(metadata$sample_name, sum) %>% # Sum per inoculum species
-  tidyr::gather(key = "sample_name", value = "read_prop", !!! metadata$sample_name) %>%
-  mutate(species = species_name_key[species]) %>%
-  mutate(read_prop = ifelse(is.nan(read_prop), 0, read_prop)) %>%
-  tidyr::spread(key = 'species', value = 'read_prop')
-metadata <- metadata %>%
-  select(sample_name, plate, well, organism, flooded, path_conc, experiment, sample_type, is_ambiguous) %>% # Avoid duplicating columns from previous runs
-  left_join(sample_infection_data, by = "sample_name")
-
-# Get expected inoculum proportion and non-target proportion
-metadata$expected_innoc_prop <- map_dbl(1:nrow(metadata), function(i) {
-  if (metadata$sample_type[i] == "Mock community") {
-    return(NA)
-  } else if (metadata$sample_type[i] == "Negative control" || metadata$organism[i] == "Control") {
-    return(NA)
-  } else {
-    prop_col <- paste0(tolower(metadata$organism[i]), '_prop')
-    return(metadata[[i, prop_col]])
-  }
-})
-metadata$unexpected_innoc_prop <- map_dbl(1:nrow(metadata), function(i) {
-  prop_cols <- c("cin_prop", "cry_prop", "plu_prop")
-  if (metadata$sample_type[i] == "Mock community"  || metadata$sample_type[i] == "Negative control" || metadata$organism[i] == "Control") {
-    return(sum(metadata[i, prop_cols]))
-  } else {
-    expected_prop_col <- paste0(tolower(metadata$organism[i]), '_prop')
-    prop_cols <- prop_cols[! prop_cols %in% expected_prop_col]
-    return(sum(metadata[i, prop_cols]))
-  }
-})
-
-# Check if expected inoculum was found
-metadata$expected_innoc <- map_lgl(1:nrow(metadata), function(i) {
-  all_innoc <- sum(metadata[i, c('cin_prop', 'cry_prop', 'plu_prop')])
-  if (metadata$sample_type[i] == "Mock community") {
-    return(NA)
-  } else if (metadata$sample_type[i] == "Negative control" || metadata$organism[i] == "Control") {
-    return(all_innoc == 0)
-  } else {
-    prop_col <- paste0(tolower(metadata$organism[i]), '_prop')
-    return(metadata[[i, prop_col]] > 0)
-  }
-})
-
-# Check if ONLY expected inoculum was found
-metadata$only_expected_innoc <- map_lgl(1:nrow(metadata), function(i) {
-  all_innoc <- sum(metadata[i, c('cin_prop', 'cry_prop', 'plu_prop')])
-  if (metadata$sample_type[i] == "Mock community") {
-    return(NA)
-  } else if (metadata$sample_type[i] == "Negative control" || metadata$organism[i] == "Control") {
-    return(all_innoc == 0)
-  } else {
-    prop_col <- paste0(tolower(metadata$organism[i]), '_prop')
-    return(metadata[[i, prop_col]] > 0 && metadata[[i, prop_col]] == all_innoc)
-  }
-})
-
-# Look at number of samples with expected inoculum
-table(metadata$expected_innoc)
-table(metadata$only_expected_innoc)
-
-metadata$valid_inoc <- (is.na(metadata$expected_innoc_prop) | metadata$expected_innoc_prop > 0.0001) & metadata$unexpected_innoc_prop < 0.0001
-map_dbl(split(metadata$valid_inoc, metadata$organism), sum)
-
-# Save new metadata
-write_csv(metadata, file.path('demulticoder/data', 'metadata_with_infection_data.csv'))
+write_csv(metadata, file.path('demulticoder/outputs', 'metadata_with_infection_data.csv'))
 ```
 
 ### Let's convert our new matrix and associated metadata table to a taxmap object
@@ -670,6 +604,7 @@ obj_subset <- filter_taxa(obj_subset, max_boot[taxon_ids] >= min_bootstrap | tax
 ### Let's make differential abundance plots for our combined dataset-first let's look at diff. abundance of taxa by whether plots were flooded or not
 ```{r abundance plots-flood, fig.height=30, fig.width=30, message=FALSE, echo=FALSE}
 # Calculate difference between groups
+set.seed = 1000
 metadata$flooded <- ifelse(metadata$flooded == TRUE, "Flooded", "Not Flooded")
 
 obj_subset$data$diff_table_flood <- calc_diff_abund_deseq2(obj_subset, data = "tax_abund",
@@ -682,7 +617,7 @@ significant_taxon_ids <- unique(
 range(obj_subset$data$diff_table_flood$padj, finite = TRUE) 
 range(obj_subset$data$diff_table_flood$log2FoldChange, finite = TRUE) 
 
-set.seed = 1000
+
 obj_subset %>%
   filter_taxa(taxon_ids %in% significant_taxon_ids, supertaxa = TRUE, reassign_obs = FALSE) %>%
   filter_taxa(! grepl(x = taxon_names, "_sp$"), reassign_obs = FALSE) %>%
@@ -827,7 +762,7 @@ obj_subset %>%
 # dev.off()
 ```
 
-### Let's finally make an exploratory heat tree to look at community composition across all samples, just retaining ASVs present at least 10 times
+### Let's finally make an exploratory heat tree to look at community composition across all samples, just retaining ASVs present in at least 50 samples
 
 ### Overall community plot
 ```{r, overall community plot 2}
@@ -860,7 +795,10 @@ obj_subset %>%
   filter_taxa(! is_stem) %>%
   filter_taxa(n_samples >= 50, supertaxa = TRUE, reassign_obs = FALSE) %>%
   filter_taxa(! grepl(x = taxon_names, "_sp$"), reassign_obs = FALSE) %>%
-  filter_taxa(! grepl(x = taxon_names, "incertae_sedis", ignore.case = TRUE), reassign_obs = FALSE) %>%
+  filter_taxa(! grepl(x = taxon_names, "Branch03"), reassign_obs = FALSE) %>%
+  filter_taxa(! grepl(x = taxon_names, "NA"), reassign_obs = FALSE) %>%
+  filter_taxa(! grepl(x = taxon_names, "incertae_sedis", ignore.case = TRUE),
+              reassign_obs = FALSE) %>%
   remove_redundant_names() %>%
   heat_tree(node_size = mean_prop,
             edge_size = n_samples,
@@ -884,19 +822,16 @@ obj_subset %>%
             output_file = file.path('demulticoder/figures', '/heattree_mostabund_taxa.svg'))
 ```
 
-### Reload ASV matrices and metadata for final checks when examining new db to the old version before updates
+### Reload ASV matrices and metadata for final checks when examining new db to the old version before updates-only don't filter out ASVs assigned as inoculum species
 ```{r load reads-compare old and new db}
-asv_matrix_rps10<-read.csv("demulticoder/data/final_asv_abundance_matrix_rps10.csv")
-asv_matrix_rps10$dada2_tax <- asv_matrix_rps10$dada2_tax <- gsub("Stramenopila", "Eukaryota--100--Domain;Stramenopila", asv_matrix_rps10$dada2_tax)
-asv_matrix_rps10 <- asv_matrix_rps10[, -1]
-colnames(asv_matrix_rps10)[3:ncol(asv_matrix_rps10)] <- gsub("_rps10$", "", colnames(asv_matrix_rps10)[3:ncol(asv_matrix_rps10)])
-
-asv_matrix_rps10_oldb<-read.csv("demulticoder/data_olddb//final_asv_abundance_matrix_rps10.csv")
+asv_matrix_rps10_oldb<-read.csv("demulticoder/outputs_olddb/final_asv_abundance_matrix_rps10.csv")
 asv_matrix_rps10_oldb$dada2_tax <- asv_matrix_rps10_oldb$dada2_tax <- gsub("Stramenopila", "Eukaryota--100--Domain;Stramenopila", asv_matrix_rps10_oldb$dada2_tax)
 asv_matrix_rps10_oldb <- asv_matrix_rps10_oldb[, -1]
 colnames(asv_matrix_rps10_oldb)[3:ncol(asv_matrix_rps10_oldb)] <- gsub("_rps10$", "", colnames(asv_matrix_rps10_oldb)[3:ncol(asv_matrix_rps10_oldb)])
 
-metadata_path <- file.path("demulticoder/data/metadata.csv")
+asv_matrix_rps10_oldb$dada2_tax <- gsub(";oomycetedb_[0-9]+--[0-9]+--Reference", "", asv_matrix_rps10_oldb$dada2_tax)
+
+metadata_path <- file.path("demulticoder/data/metadata_comp.csv")
 metadata <- read_csv(metadata_path)
 print(metadata)
 ```
@@ -938,7 +873,6 @@ obj_olddb <- parse_tax_data(asv_matrix_rps10_oldb, class_cols = 'dada2_tax', cla
 names(obj_olddb$data) <- c('abund', 'score')
 obj_olddb <- transmute_obs(obj_olddb, 'score', sequence = sequence[input_index], boot = boot, rank = rank)
 
-
 # For diversity calculations, we'll use proportions of read depth
 # We'll set any proportion to 0 that is less than the inverse of the read count of the non-control sample with the fewest reads.
 # This should account for unequal sample read depth without the randomness of rarefaction.
@@ -961,7 +895,7 @@ obj_olddb$data$prop
 
 ### Community composition plot-new db-showcase differences in bootstrap support values
 ```{r, overall community plot new db}
-min_bootstrap <- 0
+min_bootstrap <- 60
 obj_newdb$data$score$boot <- as.numeric(obj_newdb$data$score$boot)
 max_boot <- obj_newdb$data$score %>%
   group_by(taxon_id) %>%
@@ -976,7 +910,7 @@ obj_newdb$data$tax_data <- calc_n_samples(obj_newdb, 'tax_prop', cols = metadata
 obj_newdb$data$tax_data$mean_prop <- rowMeans(obj_newdb$data$tax_prop[, metadata$sample_name])
 
 obj_newdb %>%
-  filter_taxa(taxon_ranks == "Species", supertaxa = TRUE, reassign_obs = c(tax_abund = FALSE)) 
+  filter_taxa(taxon_ranks == "Species", supertaxa = TRUE, reassign_obs = c(tax_abund = FALSE))
 
 # Calculate the relative standard deviation for each taxon as a measure of how consistently it was found.
 rsd <- function(x, na.rm = FALSE) {sd(x, na.rm = na.rm) / mean(x, na.rm = na.rm)}
@@ -994,7 +928,7 @@ max_boot <- setNames(max_boot$max, max_boot$taxon_id)
 # Add maximum bootstrap support to tax_data
 obj_newdb$data$tax_data$max_boot <- max_boot[match(obj_newdb$data$tax_data$taxon_id, names(max_boot))]
 
-set.seed(10)
+set.seed(1)
 
 obj_newdb %>%
   filter_taxa(! is_stem) %>%
@@ -1007,11 +941,11 @@ obj_newdb %>%
             node_color = ifelse(is.na(max_boot), 0, max_boot),
             node_color_range = c("#D2042D","#fc8d62","#a6d854","#66c2a5","lightblue","#b8c0cf"),
             node_label = taxon_names,
-            node_size_range = c(0.01, 0.03), 
+            node_size_range = c(0.01, 0.03),
             node_label_size_range = c(0.014, 0.02),
-            edge_label_size_range = c(0.012, 0.015), 
+            edge_label_size_range = c(0.012, 0.015),
             node_size_interval = c(0, 1),
-            edge_size_range = c(0.002, 0.01), 
+            edge_size_range = c(0.002, 0.01),
             layout = "da", initial_layout = "re",
             node_color_axis_label = "Bootstrap support",
             node_size_axis_label = "Mean proportion of reads",
@@ -1021,13 +955,13 @@ obj_newdb %>%
             edge_color_digits = 2,
             edge_size_digits = 2,
             #aspect_ratio = 1.618,
-            output_file = file.path('demulticoder/figures', '/heattree_mostabund_taxa_rps10_newdb_boot0_greater1.svg'))
+            output_file = file.path('demulticoder/figures', '/heattree_mostabund_taxa_rps10_newdb_boot60_greater1.svg'))
 ```
 
 ### Community composition plot-old db-showcase differences in bootstrap support values
 ```{r, overall community plot}
 ### Community composition plot-new db-showcase differences in bootstrap support values
-min_bootstrap <- 0
+min_bootstrap <- 60
 obj_olddb$data$score$boot <- as.numeric(obj_olddb$data$score$boot)
 max_boot <- obj_olddb$data$score %>%
   group_by(taxon_id) %>%
@@ -1042,7 +976,7 @@ obj_olddb$data$tax_data <- calc_n_samples(obj_olddb, 'tax_prop', cols = metadata
 obj_olddb$data$tax_data$mean_prop <- rowMeans(obj_olddb$data$tax_prop[, metadata$sample_name])
 
 obj_olddb %>%
-  filter_taxa(taxon_ranks == "Species", supertaxa = TRUE, reassign_obs = c(tax_abund = FALSE)) 
+  filter_taxa(taxon_ranks == "Species", supertaxa = TRUE, reassign_obs = c(tax_abund = FALSE))
 
 # Calculate the relative standard deviation for each taxon as a measure of how consistently it was found.
 rsd <- function(x, na.rm = FALSE) {sd(x, na.rm = na.rm) / mean(x, na.rm = na.rm)}
@@ -1061,7 +995,7 @@ max_boot <- setNames(max_boot$max, max_boot$taxon_id)
 obj_olddb$data$tax_data$max_boot <- max_boot[match(obj_olddb$data$tax_data$taxon_id, names(max_boot))]
 
 
-set.seed(10)
+set.seed(5)
 
 obj_olddb %>%
   filter_taxa(! is_stem) %>%
@@ -1074,11 +1008,11 @@ obj_olddb %>%
             node_color = ifelse(is.na(max_boot), 0, max_boot),
             node_color_range = c("#D2042D","#fc8d62","#a6d854","#66c2a5","lightblue","#b8c0cf"),
             node_label = taxon_names,
-            node_size_range = c(0.01, 0.03), 
+            node_size_range = c(0.01, 0.03),
             node_label_size_range = c(0.014, 0.02),
-            edge_label_size_range = c(0.012, 0.015), 
+            edge_label_size_range = c(0.012, 0.015),
             node_size_interval = c(0, 1),
-            edge_size_range = c(0.002, 0.01), 
+            edge_size_range = c(0.002, 0.01),
             layout = "da", initial_layout = "re",
             node_color_axis_label = "Bootstrap support",
             node_size_axis_label = "Mean proportion of reads",
@@ -1088,31 +1022,7 @@ obj_olddb %>%
             edge_color_digits = 2,
             edge_size_digits = 2,
             #aspect_ratio = 1.618,
-            output_file = file.path('demulticoder/figures', '/heattree_mostabund_taxa_rps10_olddb_boot0_greater1.svg'))
-```
-
-Let's facet the two plots so we have a side-by-side comparison of the two databases. 
-```{r, facet community plot, message=FALSE, echo=FALSE}
-old_db <- image_read_pdf("demulticoder/figures/heattree_mostabund_taxa_rps10_olddb_boot0_greater1.pdf")
-new_db <- image_read_pdf("demulticoder/figures/heattree_mostabund_taxa_rps10_newdb_boot0_greater1.pdf")
-
-old_grob <- rasterGrob(as.raster(old_db))
-new_grob <- rasterGrob(as.raster(new_db))
-
-### Now try saving the plot using cowplot
-combined_heat_trees <- plot_grid(old_grob, new_grob, ncol = 2, labels = c('A.', 'B.'), 
-                                 rel_heights = c(1, 1))
-
-# Adjust the layout to reduce white space and adjust margins
-combined_heat_trees <- combined_heat_trees + 
-  theme(plot.margin = unit(c(0.5, 0.5, 0.5, 0.5), "cm"))
-
-# Save the plot with the specified dimensions
-ggsave(combined_heat_trees, path = "demulticoder/figures", filename = "combined_heat_trees_db_compare_60boot.pdf", 
-       width = 7, height = 4.5, bg = "#FFFFFF")
-
-ggsave(combined_heat_trees, path = "demulticoder/figures", filename = "combined_heat_trees_db_compare_0boot.svg", 
-       width = 7, height = 4.5, bg = "#FFFFFF")
+            output_file = file.path('demulticoder/figures', '/heattree_mostabund_taxa_rps10_olddb_boot60_greater1.svg'))
 ```
 
 ### Summary stats comparing db

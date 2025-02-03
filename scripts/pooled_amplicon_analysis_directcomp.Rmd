@@ -330,48 +330,6 @@ ggsave(combined_div_plot, path = "demulticoder_comp_sf/figures", filename = "div
        width = 12.5, height = 4.75, bg = "#FFFFFF")
 ```
 
-### DESEQ2-flood side-by-side  
-```{r facetted figure-deseq}
-demulticoder_flood <- magick::image_read_pdf("demulticoder/figures/diff_taxon_abund_flood.pdf")
-sf_flood <- magick::image_read_pdf("standard_workflow/combined_figures/diff_taxon_abund_flood.pdf")
-
-sf_grob <- rasterGrob(as.raster(sf_flood))
-demulticoder_grob <- rasterGrob(as.raster(demulticoder_flood))
-
-combined_heat_trees <- cowplot::plot_grid(demulticoder_grob, sf_grob, ncol = 2, labels = c('A.', 'B.'), 
-                                 rel_heights = c(1, 1), align = "v")
-
-combined_heat_trees <- combined_heat_trees + 
-  theme(plot.margin = unit(c(0.5, 0.5, 0.5, 0.5), "cm"))
-
-ggsave(combined_heat_trees, path = "demulticoder_comp_sf/figures", filename = "combined_heat_trees_deseq2_flood.pdf", 
-       width =7, height = 4, bg = "#FFFFFF")
-
-ggsave(combined_heat_trees, path = "demulticoder_comp_sf/figures", filename = "combined_heat_trees_deseq2_flood.svg", 
-       width =7, height = 4, bg = "#FFFFFF")
-```
-
-
-### Heat trees of most abundant taxa-side-by-side comparison
-```{r facet figure-most abundant taxa}
-demulticoder_abund <- magick::image_read_pdf("demulticoder/figures/heattree_mostabund_taxa.pdf")
-sf_abund <- magick::image_read_pdf("standard_workflow/combined_figures/heattree_mostabund_taxa.pdf")
-
-sf_grob <- rasterGrob(as.raster(sf_abund))
-demulticoder_grob <- rasterGrob(as.raster(demulticoder_abund))
-
-combined_heat_trees <- cowplot::plot_grid(demulticoder_grob, sf_grob, ncol = 2, labels = c('A.', 'B.'), 
-                                 rel_heights = c(1, 1), align = "v")
-
-combined_heat_trees <- combined_heat_trees + 
-  theme(plot.margin = unit(c(0.5, 0.5, 0.5, 0.5), "cm"))
-
-ggsave(combined_heat_trees, path = "demulticoder_comp_sf/figures", filename = "mostabund_taxa_combined.pdf", 
-       width =7, height = 4, bg = "#FFFFFF")
-
-ggsave(combined_heat_trees, path = "demulticoder_comp_sf/figures", filename = "mostabund_taxa_combined.svg", 
-       width =7, height = 4, bg = "#FFFFFF")
-```
 
 ### Let's collect info on R configuration and associated package versions that are downloaded
 ```{r session info}

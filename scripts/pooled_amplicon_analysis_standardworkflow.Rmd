@@ -46,7 +46,7 @@ set.seed(seed)
 
 ### Let's also load files from the standard worfklows for its and dataset rps10 datasets, and combine. We'll then make a combined matrix that is analogous to what was done with the demulticoder analysis
 ```{r load files standard workflow its}
-taxa_its<- read.table("standard_workflow/its/data/its_taxa.out", sep="\t", stringsAsFactors=F,header=T)
+taxa_its<- read.table("standard_workflow/its/outputs/its_taxa.out", sep="\t", stringsAsFactors=F,header=T)
 
 taxa_filt_its <- taxa_its %>%
   mutate(across(starts_with("tax."), ~ ifelse(get(str_replace(cur_column(), "tax.", "boot.")) < 0, NA, .))) %>%
@@ -71,7 +71,7 @@ taxa_its_df <- taxa_its_df[, c("sequence", setdiff(names(taxa_its_df), "sequence
 rownames(taxa_its_df) <- NULL
 
 #Load ASV matrix now
-seqtab_nochim_its <- read.table("standard_workflow/its/data/its_seqtab_nochim.out")
+seqtab_nochim_its <- read.table("standard_workflow/its/outputs/its_seqtab_nochim.out")
 seqtab_nochim_its <- t(seqtab_nochim_its)
 seqtab_nochim_its_df <- as.data.frame(seqtab_nochim_its)
 seqtab_nochim_its_df$sequence <- rownames(seqtab_nochim_its_df)
@@ -108,17 +108,17 @@ combined_df_its$dada2_tax <- gsub("Fungi--", "Eukaryota--100--Domain;Fungi--", c
 samdf_its<- read.csv("standard_workflow/its/data/metadata_its.csv")
 
 #Save file
-write.csv(combined_df_its, "standard_workflow/its/data/its_abundance_matrix_combined_dada2workflow.csv")
+write.csv(combined_df_its, "standard_workflow/its/outputs/its_abundance_matrix_combined_dada2workflow.csv")
 ```
 
 ### Track number of reads throughout the pipeline
 ```{r track reads through DADA2 analysis its, include=TRUE}
-track_reads_standard_wf_its <- read.table("standard_workflow/its/data/its_trackreads.out", sep="\t", stringsAsFactors = F, header=T)
+track_reads_standard_wf_its <- read.table("standard_workflow/its/outputs/its_trackreads.out", sep="\t", stringsAsFactors = F, header=T)
 ```
 
 ### Let's also do the same for the rps10 dataset
 ```{r load files standard workflow rps10}
-taxa_rps10<- read.table("standard_workflow/rps10/data/rps10_taxa.out", sep="\t", stringsAsFactors=F,header=T)
+taxa_rps10<- read.table("standard_workflow/rps10/outputs/rps10_taxa_option3_semicolon.out", sep="\t", stringsAsFactors=F,header=T)
 
 taxa_filt_rps10 <- taxa_rps10 %>%
   mutate(across(starts_with("tax."), ~ ifelse(get(str_replace(cur_column(), "tax.", "boot.")) < 0, NA, .))) %>%
@@ -129,7 +129,6 @@ remove_prefix_rps10 <- function(data) {
   return(data)
 }
 
-taxa_filt_rps10[] <- lapply(taxa_filt_rps10, remove_prefix_rps10)
 
 taxa_rps10_df <- as.data.frame(taxa_filt_rps10)
 taxa_rps10_df$sequence <- rownames(taxa_rps10_df)
@@ -137,7 +136,7 @@ taxa_rps10_df <- taxa_rps10_df[, c("sequence", setdiff(names(taxa_rps10_df), "se
 rownames(taxa_rps10_df) <- NULL
 
 #Load ASV matrix now
-seqtab_nochim_rps10 <- read.table("standard_workflow/rps10/data/rps10_seqtab_nochim.out")
+seqtab_nochim_rps10 <- read.table("standard_workflow/rps10/outputs/rps10_seqtab_nochim.out")
 rownames(seqtab_nochim_rps10) <- gsub("__", "_", rownames(seqtab_nochim_rps10))
 
 seqtab_nochim_rps10 <- t(seqtab_nochim_rps10)
@@ -150,10 +149,10 @@ rownames(seqtab_nochim_rps10_df) <- NULL
 combined_df_rps10 <- merge(seqtab_nochim_rps10_df, taxa_rps10_df, by = "sequence", all = TRUE)
 
 taxonomic_cols <- c("Kingdom", "Phylum", "Class", "Order", 
-                    "Family", "Genus", "Species")
+                    "Family", "Genus", "Species", "Reference")
 
 bootstrap_cols <- c("boot.Kingdom", "boot.Phylum", "boot.Class", "boot.Order", 
-                    "boot.Family", "boot.Genus", "boot.Species")
+                    "boot.Family", "boot.Genus", "boot.Species", "boot.Reference")
 
 dada2_tax <- mapply(function(tax, boot, level) {
   paste(tax, boot, level, sep = "--")
@@ -175,15 +174,12 @@ combined_df_rps10$dada2_tax <- gsub("Stramenopila", "Eukaryota--100--Domain;Stra
 samdf_rps10<- read.csv("standard_workflow/rps10/data/metadata_rps10.csv")
 
 #Save file
-write.csv(combined_df_rps10, "standard_workflow/rps10/data/rps10_abundance_matrix_combined_dada2workflow.csv")
-
-#Load DADA2 metadata file
-samdf_rps10<- read.csv("standard_workflow/rps10/data/metadata_rps10.csv")
+write.csv(combined_df_rps10, "standard_workflow/rps10/outputs/rps10_abundance_matrix_combined_dada2workflow.csv")
 ```
 
 ### Track number of reads throughout the pipeline
 ```{r track reads through DADA2 analysis rps10, include=TRUE}
-track_reads_standard_wf_rps10 <- read.table("standard_workflow/rps10/data/rps10_trackreads.out", sep="\t", stringsAsFactors = F, header=T)
+track_reads_standard_wf_rps10 <- read.table("standard_workflow/rps10/outputs/rps10_trackreads.out", sep="\t", stringsAsFactors = F, header=T)
 ```
 
 ### Finally Let's first combine rps10 and its data into fully combined matrices
@@ -314,7 +310,7 @@ if(exists("combined_df_its")) {
 First we will configure the combined taxmap object
 ```{r make taxmap object, fig.height=10, fig.width=6, message=FALSE}
 #load reference database
-rps10_database <- read_fasta("demulticoder/outputs/rps10_reference_db.fa")
+rps10_database <- read_fasta("standard_workflow/rps10/data/rps10_reference_db_unique.fa")
 innoc_species <- c(Cin = "Phytophthora_cinnamomi",  Plu = "Phytophthora_plurivora", Cry = "Globisporangium_cryptoirregulare")
 innoc_regex <- paste0('(', paste0(innoc_species, collapse = '|'), ')')
 innoc_seqs <- rps10_database[grepl(names(rps10_database), pattern = innoc_regex)]
@@ -634,9 +630,10 @@ nmds_plot_data <- function(prob_table) {
 nmds_data <- nmds_plot_data(prob_table[! is.na(metadata$organism) & metadata$valid_inoc])
 
 #nmds_data <- nmds_plot_data(prob_table)
+
 #Results are arbitrarily mirrored compared to my demulticoder analyses, so I will fix this here, without changing the meaning
 
-nmds_data$NMDS2 <- -nmds_data$NMDS2
+#nmds_data$NMDS2 <- -nmds_data$NMDS2
 
 nmds_factors <- c(Flooded = 'flooded', Organism = 'organism', 'Pathogen CFU/g' = 'path_conc', 'Trial' = 'experiment')
 
@@ -815,6 +812,7 @@ obj_subset <- filter_taxa(obj_subset, max_boot[taxon_ids] >= min_bootstrap | tax
 ### Let's make differential abundance plots for our combined dataset-first let's look at diff. abundance of taxa by whether plots were flooded or not
 ```{r abundance plots-flood, message=FALSE, echo=FALSE}
 # Calculate difference between groups
+set.seed = 1000
 metadata$flooded <- ifelse(metadata$flooded == TRUE, "Flooded", "Not Flooded")
 
 obj_subset$data$diff_table_flood <- calc_diff_abund_deseq2(obj_subset, data = "tax_abund",
@@ -826,8 +824,6 @@ significant_taxon_ids <- unique(
 
 range(obj_subset$data$diff_table_flood$padj, finite = TRUE) 
 range(obj_subset$data$diff_table_flood$log2FoldChange, finite = TRUE) 
-
-set.seed = 1000
 obj_subset %>%
   filter_taxa(taxon_ids %in% significant_taxon_ids, supertaxa = TRUE, reassign_obs = FALSE) %>%
   filter_taxa(! grepl(x = taxon_names, "_sp$"), reassign_obs = FALSE) %>%
@@ -848,7 +844,7 @@ obj_subset %>%
             node_color_range = diverging_palette(),
             node_size_axis_label = "Mean read proportion",
             node_color_axis_label = "Log fold change",
-            output_file = file.path('standard_workflow/combined_figures', 'diff_taxon_abund_flood.pdf'))
+            output_file = file.path('standard_workflow/combined_figures', 'diff_taxon_abund_flood.svg'))
 ```
 
 ### Let's make differential abundance plots for our combined dataset-first let's look at diff. abundance of taxa by inoculum source
@@ -1008,8 +1004,10 @@ obj_subset %>%
   filter_taxa(! is_stem) %>%
   filter_taxa(n_samples >= 50, supertaxa = TRUE, reassign_obs = FALSE) %>%
   filter_taxa(! grepl(x = taxon_names, "_sp$"), reassign_obs = FALSE) %>%
-  filter_taxa(! grepl(x = taxon_names, "incertae_sedis", ignore.case = TRUE), reassign_obs = FALSE) %>%
-  filter_taxa(! grepl(x = taxon_names, "NA", ignore.case = TRUE), reassign_obs = FALSE) %>%
+  filter_taxa(! grepl(x = taxon_names, "NA"), reassign_obs = FALSE) %>%
+  filter_taxa(! grepl(x = taxon_names, "Branch03"), reassign_obs = FALSE) %>%
+  filter_taxa(! grepl(x = taxon_names, "incertae_sedis", ignore.case = TRUE),
+              reassign_obs = FALSE) %>%
   remove_redundant_names() %>%
   heat_tree(node_size = mean_prop,
             edge_size = n_samples,
