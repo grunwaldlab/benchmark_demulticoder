@@ -27,7 +27,6 @@ library(vegan); packageVersion("vegan")
 library(grid)
 library(gridExtra)
 knitr::opts_knit$set(root.dir = "~/benchmark_demulticoder")
-
 seed <- 1
 set.seed(seed)
 ```
