@@ -752,7 +752,6 @@ obj2 <- transmute_obs(obj2, 'score', sequence = sequence[input_index], boot = bo
 print(obj2)
 
 obj2$data$tax_abund <- calc_taxon_abund(obj2, data = "abund", cols = metadata$sample_name)
-
 obj2$data$abund_prop <- calc_obs_props(obj2, data = "abund", cols = metadata$sample_name, groups = rep("tax_prop", nrow(metadata)))
 obj2$data$tax_prop <- calc_taxon_abund(obj2, data = "abund_prop", cols = "tax_prop")
 obj2$data$abund_prop <- NULL

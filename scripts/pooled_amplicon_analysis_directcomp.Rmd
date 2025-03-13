@@ -103,7 +103,7 @@ nmds1_demulticoder <- nmds_demulticoder$NMDS1
 nmds1_sf <- nmds_sf$NMDS1
 nmds2_demulticoder <- nmds_demulticoder$NMDS2
 nmds2_sf <- nmds_sf$NMDS2
-expected_innoc<-nmds_demulticoder$only_expected_innoc
+expected_innoc<-nmds_demulticoder$expected_innoc
 
 #Add to new table
 nmds_df <- data.frame(sample_name, expected_innoc, nmds1_sf, nmds1_demulticoder, nmds1_diff, nmds2_sf, nmds2_demulticoder,nmds2_diff)
