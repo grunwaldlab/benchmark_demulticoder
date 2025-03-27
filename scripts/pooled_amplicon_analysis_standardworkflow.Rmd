@@ -118,7 +118,7 @@ track_reads_standard_wf_its <- read.table("standard_workflow/its/outputs/its_tra
 
 ### Let's also do the same for the rps10 dataset
 ```{r load files standard workflow rps10}
-taxa_rps10<- read.table("standard_workflow/rps10/outputs/rps10_taxa_option3_semicolon.out", sep="\t", stringsAsFactors=F,header=T)
+taxa_rps10<- read.table("standard_workflow/rps10/outputs/rps10_taxa.out", sep="\t", stringsAsFactors=F,header=T)
 
 taxa_filt_rps10 <- taxa_rps10 %>%
   mutate(across(starts_with("tax."), ~ ifelse(get(str_replace(cur_column(), "tax.", "boot.")) < 0, NA, .))) %>%
