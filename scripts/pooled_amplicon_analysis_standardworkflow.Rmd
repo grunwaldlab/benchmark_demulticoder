@@ -36,7 +36,7 @@ library(magick); packageVersion("magick")
 library(pdftools);packageVersion("pdftools")
 library(vegan); packageVersion("vegan")
 library(grid); packageVersion("grid")
-knitr::opts_knit$set(root.dir = "~/benchmark_demulticoder")
+knitr::opts_knit$set(root.dir = "~/Documents/Postdoc/benchmark_demulticoder")
 
 seed <- 1
 set.seed(seed)
@@ -149,10 +149,10 @@ rownames(seqtab_nochim_rps10_df) <- NULL
 combined_df_rps10 <- merge(seqtab_nochim_rps10_df, taxa_rps10_df, by = "sequence", all = TRUE)
 
 taxonomic_cols <- c("Kingdom", "Phylum", "Class", "Order", 
-                    "Family", "Genus", "Species", "Reference")
+                    "Family", "Genus", "Species")
 
 bootstrap_cols <- c("boot.Kingdom", "boot.Phylum", "boot.Class", "boot.Order", 
-                    "boot.Family", "boot.Genus", "boot.Species", "boot.Reference")
+                    "boot.Family", "boot.Genus", "boot.Species")
 
 dada2_tax <- mapply(function(tax, boot, level) {
   paste(tax, boot, level, sep = "--")
@@ -727,7 +727,7 @@ print(adonis2_experiment)
 ```
 
 
-### Let's make new taxmap object in preparation to make heattree examining abundance and diversity of taxa in at least 5 samples
+### Let's make new taxmap object in preparation to make heattree examining abundance and diversity of taxa 
 ```{r diff heat tree setup}
 # Make sure our factors are input properly as factors
 #Make sure our factors are input properly as factors
@@ -970,8 +970,7 @@ obj_subset %>%
 # dev.off()
 ```
 
-### Let's finally make an exploratory heat tree to look at community composition across all samples, just retaining ASVs present at least 10 times
-
+### Let's finally make an exploratory heat tree to look at community composition across all samples, just retaining ASVs present in at least 50 samples
 ### Overall community plot
 ```{r, overall community plot}
 obj_subset <- obj2 %>%
