@@ -727,7 +727,7 @@ print(adonis2_experiment)
 ```
 
 
-### Let's make new taxmap object in preparation to make heattree examining abundance and diversity of taxa 
+### Let's make new taxmap object in preparation to make heattree examining abundance and diversity of taxa in at least 5 samples 
 ```{r diff heat tree setup}
 # Make sure our factors are input properly as factors
 #Make sure our factors are input properly as factors
