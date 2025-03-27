@@ -520,7 +520,7 @@ print(adonis2_experiment)
 ```
 
 
-### Let's make new taxmap object in preparation to make heattree examining abundance and diversity of taxa, and filter out ASVS not present at least 5 times across samples
+### Let's make new taxmap object in preparation to make heattree examining abundance and diversity of taxa
 ```{r diff heat tree setup}
 #Make sure our factors are input properly as factors
 metadata$path_conc <- as.factor(metadata$path_conc)
@@ -535,7 +535,7 @@ metadata$flooded <- factor(metadata$flooded, levels = c("TRUE", "FALSE"))
 metadata$experiment <- as.factor(metadata$experiment)
 metadata$experiment<- factor(metadata$experiment, levels = c("1", "2"))
 
-abundance$is_low_abund <- rowSums(abundance[, metadata$sample_name]) < 5
+#abundance$is_low_abund <- rowSums(abundance[, metadata$sample_name]) < 5
 obj2 <- parse_tax_data(abundance, class_cols = 'dada2_tax', class_sep = ';',
                       class_regex = '^(.+)--(.+)--(.+)$',
                       class_key = c(taxon = 'taxon_name', boot = 'info', rank = 'taxon_rank'))
