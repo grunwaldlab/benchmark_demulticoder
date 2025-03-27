@@ -520,7 +520,7 @@ print(adonis2_experiment)
 ```
 
 
-### Let's make new taxmap object in preparation to make heattree examining abundance and diversity of taxa in at least 5 samples
+### Let's make new taxmap object in preparation to make heattree examining abundance and diversity of taxa, and filter out ASVS not present at least 5 times across samples
 ```{r diff heat tree setup}
 #Make sure our factors are input properly as factors
 metadata$path_conc <- as.factor(metadata$path_conc)
